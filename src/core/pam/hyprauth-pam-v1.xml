@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<protocol name="hyprauth_pam_v1" version="1">
+  <copyright>
+    Hyprauth contributors. #TODO:
+  </copyright>
+
+  <enum name="internal_error">
+    <value idx="0" name="client" description="error on the client side unrelated to the pam authentication itself"/>
+    <value idx="1" name="server" description="server error"/>
+  </enum>
+
+  <object name="pam_conversation_v1" version="1">
+    <description summary="manager object">
+      This object facilitates a pam conversation over the wire.
+    </description>
+
+    <c2s name="client_ready">
+      <description summary="Client is ready">
+        Notify the server that we are ready to recieve the pam response channel.
+      </description>
+    </c2s>
+
+    <s2c name="start">
+      <description summary="Start pam authentication">
+        Start pam authentication for the currently active user session.
+        Sending this before client_ready is a protocol error.
+        As long as the authentication try hasn't concluded
+        with a success or fail event, sending start again is a protocol error.
+      </description>
+    </s2c>
+
+    <c2s name="success">
+      <description summary="Submit authentication success">
+        Success event from the pam client.
+        The server must ignore this in case token_bytes does not match the corresponding provider token on the server side.
+      </description>
+      <arg name="token_bytes" type="varchar" summary="token bytes"/>
+    </c2s>
+
+    <c2s name="fail">
+      <description summary="Sumbit authentication failure">
+        Failure event from the pam client.
+        The server must ignore this in case token_bytes does not match the corresponding provider token on the server side.
+      </description>
+      <arg name="token_bytes" type="varchar" summary="token bytes"/>
+      <arg name="message" type="varchar" summary="token bytes"/>
+    </c2s>
+
+    <s2c name="finished">
+      <description summary="We are done here. Make the client exit.">
+         The server may decide to send this at any time. The client is expected to exit gracefully.
+      </description>
+    </s2c>
+
+    <s2c name="pam_response_channel">
+      <description summary="Send the pam response file descriptor">
+        The server must send this file descriptor immediatly.
+        It is then used to send password or other authentication prompt responses to the conversation.
+
+        This is done via a seperate fd because it allows the pam process to block reading it.
+      </description>
+      <arg name="messageFd" type="fd" summary="filedescriptor used to read the authentication response from"/>
+    </s2c>
+
+    <c2s name="pam_prompt">
+      <description summary="Submit PAM_PROMPT_ECHO_OFF or PAM_PROMPT_ECHO_ON obtained from the pam convo">
+        PAM_PROMPT_ECHO_OFF or PAM_PROMPT_ECHO_ON messages directly from pam.
+      </description>
+      <arg name="message" type="varchar" summary="message"/>
+    </c2s>
+
+    <c2s name="pam_text_info">
+      <description summary="Submit PAM_TEXT_INFO obtained from the pam convo">
+        PAM_TEXT_INFO messages from pam.
+      </description>
+      <arg name="message" type="varchar" summary="message"/>
+    </c2s>
+
+    <c2s name="pam_error_msg">
+      <description summary="Submit PAM_ERROR_MSG obtained from the pam convo">
+        PAM_ERROR_MSG messages from pam.
+      </description>
+      <arg name="message" type="varchar" summary="message"/>
+    </c2s>
+
+  </object>
+</protocol>

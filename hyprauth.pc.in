@@ -1,0 +1,10 @@
+prefix=@PREFIX@
+includedir=@INCLUDE@
+libdir=@LIBDIR@
+
+Name: hyprauth
+URL: https://github.com/hyprwm/hyprauth
+Description: TODO
+Version: @HYPRAUTH_VERSION@
+Cflags: -I${includedir}
+Libs: -L${libdir} -lhyprauth
