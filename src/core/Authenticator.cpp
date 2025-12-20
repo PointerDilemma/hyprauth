@@ -124,7 +124,11 @@ const std::string& CAuthenticator::getUserName() {
         return m_data.userName;
 
     const auto PWUID = getpwuid(getuid());
-    RASSERT(PWUID && PWUID->pw_name, "Failed to get username (getpwuid)");
+    if (!PWUID) {
+        log(LOG_ERR, "Failed to get username (getpwuid). This may break authentication providers.");
+        return m_data.userName;
+    }
+
     m_data.userName = PWUID->pw_name;
     return m_data.userName;
 }
