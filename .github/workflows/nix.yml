@@ -6,8 +6,8 @@ jobs:
     strategy:
       matrix:
         package:
-          - hyprwire
-          - hyprwire-with-tests
+          - hyprauth
+          - hyprauth-with-tests
 
     runs-on: ubuntu-latest
     steps:
