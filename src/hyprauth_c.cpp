@@ -27,12 +27,13 @@ void hyprauth_destroy(hyprauth_authenticator_t auth) {
     g_auth.reset();
 }
 
-hyprauth_provider_t hyprauth_add_pam_provider(hyprauth_authenticator_t auth, const char* pam_module) {
+hyprauth_provider_t hyprauth_add_pam_provider(hyprauth_authenticator_t auth, hyprauth_pam_options opts) {
     if (g_auth.get() != auth)
         return 0;
 
     IAuthProvider::SPamCreationData data;
-    data.module = (pam_module) ? pam_module : "";
+    data.module = (opts.pam_module) ? opts.pam_module : "";
+    data.extendUserCreds = opts.extend_user_creds;
 
     auto pam    = IAuthProvider::createPamProvider(data);
     if (!pam)
@@ -42,12 +43,13 @@ hyprauth_provider_t hyprauth_add_pam_provider(hyprauth_authenticator_t auth, con
     return pam->m_tok;
 };
 
-hyprauth_provider_t hyprauth_add_fprint_provider(hyprauth_authenticator_t auth, size_t num_tries) {
+hyprauth_provider_t hyprauth_add_fprint_provider(hyprauth_authenticator_t auth, hyprauth_fprint_options opts) {
     if (g_auth.get() != auth)
         return 0;
 
     IAuthProvider::SFprintCreationData data;
-    data.numTries = num_tries;
+    data.readyPrompt = (opts.ready_prompt) ? opts.ready_prompt : "";
+    data.numTries = opts.num_tries;
 
     auto fprint   = IAuthProvider::createFprintProvider(data);
     if (!fprint)

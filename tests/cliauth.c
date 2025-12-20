@@ -27,8 +27,8 @@ static hyprauth_callbacks auth_callbacks = {
 int main() {
     hyprauth_authenticator_t auth_handle = hyprauth_create("");
 
-    hyprauth_provider_t      pamTok    = hyprauth_add_pam_provider(auth_handle, "su");
-    hyprauth_provider_t      fprintTok = hyprauth_add_fprint_provider(auth_handle, 3);
+    hyprauth_provider_t      pamTok    = hyprauth_add_pam_provider(auth_handle, (hyprauth_pam_options) {"su", true});
+    hyprauth_provider_t      fprintTok = hyprauth_add_fprint_provider(auth_handle, (hyprauth_fprint_options) { NULL, 3 });
 
     bool                     success = false;
     hyprauth_set_callbacks(auth_handle, auth_callbacks, (void*)&success);
