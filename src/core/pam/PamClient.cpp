@@ -12,8 +12,8 @@ using namespace Hyprauth;
 using namespace Hyprutils::CLI;
 using namespace Hyprutils::OS;
 
-CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::SPamCreationData& pamData) :
-    m_tok(tok), m_pamData(pamData), m_responseData(HYPRAUTH_SECRETBUFFER_DEFAULT_SIZE) {
+CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::SPamCreationData& data) :
+    m_tok(tok), m_data(data), m_responseData(HYPRAUTH_SECRETBUFFER_DEFAULT_SIZE) {
     m_wire.spec = makeShared<CCHyprauthPamV1Impl>(HYPRAUTH_PAM_PROTOCOL_VERSION);
     m_wire.sock = Hyprwire::IClientSocket::open(sockFd);
     if (!m_wire.sock) {
@@ -105,22 +105,30 @@ void CPamClient::auth() {
     *rc<AuthProviderToken*>(tokenBytes) = m_tok;
 
     int ret = PAM_SUCCESS;
-    ret     = pam_start(m_pamData.module.c_str(), USERNAME.c_str(), &localConv, &handle);
+    ret     = pam_start(m_data.module.c_str(), USERNAME.c_str(), &localConv, &handle);
 
     if (ret != PAM_SUCCESS) {
-        m_wire.com->sendFail(tokenBytes, std::format("pam_start failed for module {}", m_pamData.module).c_str());
+        m_wire.com->sendFail(tokenBytes, std::format("pam_start failed for module {}", m_data.module).c_str());
         return;
     }
 
     ret = pam_authenticate(handle, 0);
+    const char* PAMERR = pam_strerror(handle, ret);
+
+    if (ret == PAM_SUCCESS && m_data.extendUserCreds) {
+        ret = pam_setcred(handle, PAM_REFRESH_CRED);
+        if (ret != PAM_SUCCESS)
+            g_auth->log(LOG_WARN, "Failed to extend user credentials: {}", pam_strerror(handle, ret));
+    }
+
     pam_end(handle, ret);
-    const char* errmsg = pam_strerror(handle, ret);
     handle             = nullptr;
 
     if (ret != PAM_SUCCESS)
-        m_wire.com->sendFail(tokenBytes, (ret != PAM_AUTH_ERR && errmsg) ? errmsg : "Authentication failed");
-    else
+        m_wire.com->sendFail(tokenBytes, (ret != PAM_AUTH_ERR && PAMERR) ? PAMERR : "Authentication failed");
+    else {
         m_wire.com->sendSuccess(tokenBytes);
+    }
 
     m_conversationActive = false;
 }

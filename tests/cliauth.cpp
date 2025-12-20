@@ -40,6 +40,7 @@ int main(int argc, char** argv, char** envp) {
 
     IAuthProvider::SPamCreationData pamData;
     pamData.module = "su";
+    pamData.extendUserCreds = true;
     auto pam       = IAuthProvider::createPamProvider(pamData);
 
     auto fprint = IAuthProvider::createFprintProvider(IAuthProvider::SFprintCreationData{});

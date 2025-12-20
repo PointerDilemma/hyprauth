@@ -61,6 +61,12 @@ namespace Hyprauth {
 
             /* Name of pam module in /etc/pam.d/<moduleName>. */
             std::string module = "";
+
+            /*
+               When enabled, call pam_setcred with PAM_REFRESH_CRED after successful authentication.
+               This will extend the lifetime of existing credentials for the user's session.
+            */
+            bool extendUserCreds = false;
         };
 
         /*
@@ -72,10 +78,10 @@ namespace Hyprauth {
             explicit SFprintCreationData();
 
             /*
-               Number of unmatched fingerprint checks before the provider refuses to accept further scans
+               Number of unmatched fingerprint checks before the provider refuses to accept further scans.
                What number makes sense here depends a bit on your sensor.
-               Most touch sensors either have bad and unoffical libfprint or support.
-               Some of those drivers scan and fail rapidly and because of that they may need a higher number.
+               Lot's of touch drivers (mostly unoffical libfprint) scan and fail rapidly because they are implemented poorly.
+               Those may need a higher limit here.
             */
             size_t numTries = 3;
 

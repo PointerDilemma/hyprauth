@@ -15,7 +15,7 @@ namespace Hyprauth {
     class CPamClient {
       public:
         ~CPamClient() = default;
-        CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::SPamCreationData& pamData);
+        CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::SPamCreationData& data);
 
         struct {
             Hyprutils::Memory::CSharedPointer<CCHyprauthPamV1Impl>       spec;
@@ -24,7 +24,7 @@ namespace Hyprauth {
         } m_wire;
 
         AuthProviderToken               m_tok;
-        IAuthProvider::SPamCreationData m_pamData;
+        IAuthProvider::SPamCreationData m_data;
 
         Hyprutils::OS::CFileDescriptor  m_responsePipe;
         CSecretBuffer                   m_responseData;
