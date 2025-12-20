@@ -15,23 +15,23 @@ void                     hyprauth_destroy(hyprauth_authenticator_t auth);
 
 typedef struct {
     const char* pam_module;
-    bool extend_user_creds;
+    bool        extend_user_creds;
 } hyprauth_pam_options;
 
 typedef struct {
     const char* ready_prompt;
-    size_t num_tries;
+    size_t      num_tries;
 } hyprauth_fprint_options;
 
-hyprauth_provider_t      hyprauth_add_pam_provider(hyprauth_authenticator_t auth, hyprauth_pam_options opts);
-hyprauth_provider_t      hyprauth_add_fprint_provider(hyprauth_authenticator_t auth, hyprauth_fprint_options opts);
+hyprauth_provider_t hyprauth_add_pam_provider(hyprauth_authenticator_t auth, hyprauth_pam_options opts);
+hyprauth_provider_t hyprauth_add_fprint_provider(hyprauth_authenticator_t auth, hyprauth_fprint_options opts);
 
-int                      hyprauth_provider_loop_fd(hyprauth_authenticator_t auth, hyprauth_provider_t provider);
-bool                     hyprauth_provider_dispatch(hyprauth_authenticator_t auth, hyprauth_provider_t provider);
+int                 hyprauth_provider_loop_fd(hyprauth_authenticator_t auth, hyprauth_provider_t provider);
+bool                hyprauth_provider_dispatch(hyprauth_authenticator_t auth, hyprauth_provider_t provider);
 
-void                     hyprauth_start(hyprauth_authenticator_t auth);
-void                     hyprauth_terminate(hyprauth_authenticator_t auth);
-void                     hyprauth_submit_input(hyprauth_authenticator_t auth, const char* input);
+void                hyprauth_start(hyprauth_authenticator_t auth);
+void                hyprauth_terminate(hyprauth_authenticator_t auth);
+void                hyprauth_submit_input(hyprauth_authenticator_t auth, const char* input);
 
 typedef struct {
     void (*hyprauth_cb_prompt)(hyprauth_provider_t provider, const char* promptText, void* data);

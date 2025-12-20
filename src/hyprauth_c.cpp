@@ -32,10 +32,10 @@ hyprauth_provider_t hyprauth_add_pam_provider(hyprauth_authenticator_t auth, hyp
         return 0;
 
     IAuthProvider::SPamCreationData data;
-    data.module = (opts.pam_module) ? opts.pam_module : "";
+    data.module          = (opts.pam_module) ? opts.pam_module : "";
     data.extendUserCreds = opts.extend_user_creds;
 
-    auto pam    = IAuthProvider::createPamProvider(data);
+    auto pam = IAuthProvider::createPamProvider(data);
     if (!pam)
         return 0;
 
@@ -49,9 +49,9 @@ hyprauth_provider_t hyprauth_add_fprint_provider(hyprauth_authenticator_t auth, 
 
     IAuthProvider::SFprintCreationData data;
     data.readyPrompt = (opts.ready_prompt) ? opts.ready_prompt : "";
-    data.numTries = opts.num_tries;
+    data.numTries    = opts.num_tries;
 
-    auto fprint   = IAuthProvider::createFprintProvider(data);
+    auto fprint = IAuthProvider::createFprintProvider(data);
     if (!fprint)
         return 0;
 

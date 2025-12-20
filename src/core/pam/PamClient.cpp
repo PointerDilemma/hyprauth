@@ -112,7 +112,7 @@ void CPamClient::auth() {
         return;
     }
 
-    ret = pam_authenticate(handle, 0);
+    ret                = pam_authenticate(handle, 0);
     const char* PAMERR = pam_strerror(handle, ret);
 
     if (ret == PAM_SUCCESS && m_data.extendUserCreds) {
@@ -122,7 +122,7 @@ void CPamClient::auth() {
     }
 
     pam_end(handle, ret);
-    handle             = nullptr;
+    handle = nullptr;
 
     if (ret != PAM_SUCCESS)
         m_wire.com->sendFail(tokenBytes, (ret != PAM_AUTH_ERR && PAMERR) ? PAMERR : "Authentication failed");

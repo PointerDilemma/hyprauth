@@ -39,9 +39,9 @@ int main(int argc, char** argv, char** envp) {
     auto                            authenticator = IAuthenticator::create(data);
 
     IAuthProvider::SPamCreationData pamData;
-    pamData.module = "su";
+    pamData.module          = "su";
     pamData.extendUserCreds = true;
-    auto pam       = IAuthProvider::createPamProvider(pamData);
+    auto pam                = IAuthProvider::createPamProvider(pamData);
 
     auto fprint = IAuthProvider::createFprintProvider(IAuthProvider::SFprintCreationData{});
 
