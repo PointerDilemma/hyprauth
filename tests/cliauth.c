@@ -27,23 +27,23 @@ static hyprauth_callbacks auth_callbacks = {
 int main() {
     hyprauth_authenticator_t auth_handle = hyprauth_create("");
 
-    hyprauth_provider_t      pamTok    = hyprauth_add_pam_provider(auth_handle, (hyprauth_pam_options){"su", true});
-    hyprauth_provider_t      fprintTok = hyprauth_add_fprint_provider(auth_handle, (hyprauth_fprint_options){NULL, 3});
+    hyprauth_provider_t      pam_provider    = hyprauth_add_pam_provider(auth_handle, (hyprauth_pam_options){"su", true});
+    hyprauth_provider_t      fprint_provider = hyprauth_add_fprint_provider(auth_handle, (hyprauth_fprint_options){NULL, 3});
 
     bool                     success = false;
     hyprauth_set_callbacks(auth_handle, auth_callbacks, (void*)&success);
 
     hyprauth_start(auth_handle);
 
-    int    pamFd    = hyprauth_provider_loop_fd(auth_handle, pamTok);
-    int    fprintFd = hyprauth_provider_loop_fd(auth_handle, fprintTok);
+    int    pam_fd    = hyprauth_provider_loop_fd(auth_handle, pam_provider);
+    int    fprint_fd = hyprauth_provider_loop_fd(auth_handle, fprint_provider);
 
     char*  line = NULL;
     size_t size = 0;
     while (!success) {
         struct pollfd pfds[3] = {
-            {.fd = STDIN_FILENO, .events = POLLIN, .revents = 0}, {.fd = pamFd, .events = POLLIN, .revents = 0}, {.fd = fprintFd, .events = POLLIN, .revents = 0}};
-        if (poll(pfds, (fprintFd > 0) ? 3 : 2, -1) < 1)
+            {.fd = STDIN_FILENO, .events = POLLIN, .revents = 0}, {.fd = pam_fd, .events = POLLIN, .revents = 0}, {.fd = fprint_fd, .events = POLLIN, .revents = 0}};
+        if (poll(pfds, (fprint_fd > 0) ? 3 : 2, -1) < 1)
             continue;
 
         if (pfds[0].revents & POLLIN) {
@@ -64,10 +64,10 @@ int main() {
 
         bool good = true;
         if (pfds[1].revents & POLLIN)
-            good &= hyprauth_provider_dispatch(auth_handle, pamTok);
+            good &= hyprauth_provider_dispatch(auth_handle, pam_provider);
 
-        if (fprintFd > 0 && pfds[2].revents & POLLIN)
-            good &= hyprauth_provider_dispatch(auth_handle, fprintTok);
+        if (fprint_fd > 0 && pfds[2].revents & POLLIN)
+            good &= hyprauth_provider_dispatch(auth_handle, fprint_provider);
 
         if (!good)
             break;
