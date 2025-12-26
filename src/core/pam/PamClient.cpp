@@ -35,22 +35,14 @@ CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::S
         g_auth->log(LOG_TRACE, "(PAM C) Server send destroy! Will exit.");
         exit(0);
     });
-}
 
-void CPamClient::start() {
-    m_wire.conversation = makeUnique<CCPamConversationV1Object>(m_wire.manager->sendMakeConversation());
-    m_wire.conversation->setResponseChannel([this](int fd) {
+    m_wire.manager->setResponseChannel([this](int fd) {
         g_auth->log(LOG_TRACE, "(PAM C) Got responsePipeFd {}", fd);
         m_responsePipe = CFileDescriptor(fd);
-
-        auth();
-
-        g_auth->log(LOG_TRACE, "(PAM C) This authentication try is done!", fd);
-        m_responsePipe.reset();
-
-        // restart (this is not recursive, we are in a function handler here)
-        start();
     });
+
+    m_wire.conversation = makeUnique<CCPamConversationV1Object>(m_wire.manager->sendMakeConversation());
+    m_wire.conversation->setStart([this]() { auth(); });
 }
 
 int conv(int num_msg, const struct pam_message** msg, struct pam_response** resp, void* appdata_ptr) {

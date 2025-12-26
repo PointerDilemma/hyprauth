@@ -33,6 +33,8 @@ class CPamConversationManagerV1Object {
     }
 
 
+    void sendResponseChannel(int messageFd);
+            
     void sendDestroy();
             
     void setMakeConversation(std::function<void(uint32_t)>&& fn);
@@ -63,7 +65,7 @@ class CPamConversationV1Object {
     }
 
 
-    void sendResponseChannel(int messageFd);
+    void sendStart();
             
     void setPamPrompt(std::function<void(const char*)>&& fn);
             

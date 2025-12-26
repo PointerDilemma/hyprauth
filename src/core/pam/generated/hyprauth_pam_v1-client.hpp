@@ -27,10 +27,13 @@ class CCPamConversationManagerV1Object {
 
     Hyprutils::Memory::CSharedPointer<Hyprwire::IObject> sendMakeConversation();
             
+    void setResponseChannel(std::function<void(int)>&& fn);
+            
     void setDestroy(std::function<void()>&& fn);
             
   private:
 	struct {
+ std::function<void(int)> response_channel;
  std::function<void()> destroy;
  } m_listeners;
         
@@ -57,11 +60,11 @@ class CCPamConversationV1Object {
             
     void sendFail(const char* token_bytes, const char* message);
             
-    void setResponseChannel(std::function<void(int)>&& fn);
+    void setStart(std::function<void()>&& fn);
             
   private:
 	struct {
- std::function<void(int)> response_channel;
+ std::function<void()> start;
  } m_listeners;
         
     Hyprutils::Memory::CWeakPointer<Hyprwire::IObject> m_object;

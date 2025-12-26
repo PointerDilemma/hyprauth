@@ -11,7 +11,7 @@
 
   <object name="pam_conversation_manager_v1" version="1">
     <description summary="Manager object">
-      Facilitate the creation of a pam conversation object.
+       Manage the pam client.
     </description>
 
     <c2s name="make_conversation">
@@ -20,6 +20,16 @@
       </description>
       <returns iface="pam_conversation_v1"/>
     </c2s>
+
+    <s2c name="response_channel">
+      <description summary="Send the pam response file descriptor">
+        The server must send this file descriptor immediatly.
+        It is then used to send password or other authentication prompt responses to the conversation.
+
+        This is done via a seperate fd because it allows the pam process to block reading it.
+      </description>
+      <arg name="messageFd" type="fd" summary="filedescriptor used to read the authentication response from"/>
+    </s2c>
 
     <s2c name="destroy" destructor="true">
       <description summary="We are done here. Make the client exit.">
@@ -34,14 +44,11 @@
       This object represents a pam conversation over the wire.
     </description>
 
-    <s2c name="response_channel">
-      <description summary="Send the pam response file descriptor">
-        The server must send this file descriptor immediatly.
-        It is then used to send password or other authentication prompt responses to the conversation.
-
-        This is done via a seperate fd because it allows the pam process to block reading it.
+    <s2c name="start">
+      <description summary="Start the conversation">
+        The server sends this to start an authentication try.
+        It is a protocol error to send another start request, before start/fail was send by the client.
       </description>
-      <arg name="messageFd" type="fd" summary="filedescriptor used to read the authentication response from"/>
     </s2c>
 
     <c2s name="pam_prompt">

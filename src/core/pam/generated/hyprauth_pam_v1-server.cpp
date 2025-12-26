@@ -32,8 +32,12 @@ CPamConversationManagerV1Object::CPamConversationManagerV1Object(Hyprutils::Memo
 CPamConversationManagerV1Object::~CPamConversationManagerV1Object() {
     ; // TODO: call destructor if present
 }
+void CPamConversationManagerV1Object::sendResponseChannel(int messageFd) {
+    m_object->call(0, messageFd);
+}
+
 void CPamConversationManagerV1Object::sendDestroy() {
-    m_object->call(0);
+    m_object->call(1);
 }
 
 void CPamConversationManagerV1Object::setMakeConversation(std::function<void(uint32_t)>&& fn) {
@@ -83,8 +87,8 @@ CPamConversationV1Object::CPamConversationV1Object(Hyprutils::Memory::CSharedPoi
 CPamConversationV1Object::~CPamConversationV1Object() {
     ; // TODO: call destructor if present
 }
-void CPamConversationV1Object::sendResponseChannel(int messageFd) {
-    m_object->call(0, messageFd);
+void CPamConversationV1Object::sendStart() {
+    m_object->call(0);
 }
 
 void CPamConversationV1Object::setPamPrompt(std::function<void(const char*)>&& fn) {

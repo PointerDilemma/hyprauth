@@ -31,9 +31,11 @@ CPam::CPam(AuthProviderToken tok, IAuthProvider::SPamCreationData data) : IAuthP
 
     m_wire.spec = makeShared<CHyprauthPamV1Impl>(HYPRAUTH_PAM_PROTOCOL_VERSION, [this](SP<Hyprwire::IObject> obj) {
         m_wire.manager = makeUnique<CPamConversationManagerV1Object>(std::move(obj));
+
         m_wire.manager->setMakeConversation([this](uint32_t seq) {
             g_auth->log(LOG_TRACE, "(PAM S) Client is here to conversate!");
-            m_wire.conversation = makeUnique<CPamConversationV1Object>(m_wire.sock->createObject(m_wire.manager->getObject()->client(), m_wire.manager->getObject(), "pam_conversation_v1", seq));
+            m_wire.conversation =
+                makeUnique<CPamConversationV1Object>(m_wire.sock->createObject(m_wire.manager->getObject()->client(), m_wire.manager->getObject(), "pam_conversation_v1", seq));
 
             m_wire.conversation->setPamPrompt([this](const char* msg) {
                 g_auth->log(LOG_TRACE, "(PAM S) prompt: {}", msg);
@@ -54,32 +56,38 @@ CPam::CPam(AuthProviderToken tok, IAuthProvider::SPamCreationData data) : IAuthP
                     m_failTextOverride.clear();
                 } else
                     g_auth->providerFail(tok, msg);
+
+                m_wire.conversation->sendStart();
             });
             m_wire.conversation->setSuccess([this](const char* token_bytes) {
                 g_auth->log(LOG_TRACE, "(PAM S) Recieved success");
                 AuthProviderToken tok = *rc<const AuthProviderToken*>(token_bytes);
                 g_auth->providerSuccess(tok);
+
                 m_wire.manager->sendDestroy();
             });
 
             m_wire.conversation->setOnDestroy([this]() {
-                g_auth->log(LOG_TRACE, "(PAM S) Conversation done");
-                m_inputPipe.reset();
+                g_auth->log(LOG_TRACE, "(PAM S) Conversation destroyed");
+
+                m_wire.conversation.reset();
             });
 
-            // First thing when client is ready -> send the channel fd!
-            int responseFds[2];
-            RASSERT(!pipe(responseFds), "Couldn't create pam response channel pipes :(");
-            m_inputPipe = CFileDescriptor(responseFds[1]);
-            m_wire.conversation->sendResponseChannel(responseFds[0]);
-            close(responseFds[0]);
+            m_wire.conversation->sendStart();
         });
 
-        m_wire.manager->setOnDestroy([this]() { //
+        m_wire.manager->setOnDestroy([this]() {
             g_auth->log(LOG_DEBUG, "(PAM S) Manager destroyed");
             m_inputPipe.reset();
             m_wire.manager.reset();
         });
+
+        // First thing when client is ready -> send the channel fd!
+        int responseFds[2];
+        RASSERT(!pipe(responseFds), "Couldn't create pam response channel pipes :(");
+        m_inputPipe = CFileDescriptor(responseFds[1]);
+        m_wire.manager->sendResponseChannel(responseFds[0]);
+        close(responseFds[0]);
     });
 }
 
@@ -101,7 +109,6 @@ void CPam::start() {
         // CHILD (Pam client)
         close(sockFds[0]);
         auto client = makeUnique<CPamClient>(sockFds[1], m_tok, m_data);
-        client->start();
 
         g_auth->log(LOG_TRACE, "(PAM C) Client entering eventloop!");
         while (client->m_wire.sock->dispatchEvents(true))

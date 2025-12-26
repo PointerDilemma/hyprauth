@@ -30,7 +30,6 @@ namespace Hyprauth {
         Hyprutils::OS::CFileDescriptor  m_responsePipe;
         CSecretBuffer                   m_responseData;
 
-        void                            start();
         void                            auth();
     };
 }

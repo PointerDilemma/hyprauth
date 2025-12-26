@@ -17,7 +17,13 @@
 using namespace Hyprutils::Memory;
 #define SP CSharedPointer
     
-static void pamConversationManagerV1_method0(Hyprwire::IObject* r) {
+static void pamConversationManagerV1_method0(Hyprwire::IObject* r, int messageFd) {
+    auto& fn = rc<CCPamConversationManagerV1Object*>(r->getData())->m_listeners.response_channel;
+    if (fn)
+        fn(messageFd);
+}
+
+static void pamConversationManagerV1_method1(Hyprwire::IObject* r) {
     auto& fn = rc<CCPamConversationManagerV1Object*>(r->getData())->m_listeners.destroy;
     if (fn)
         fn();
@@ -27,6 +33,7 @@ CCPamConversationManagerV1Object::CCPamConversationManagerV1Object(Hyprutils::Me
     m_object->setData(this);
             
     m_object->listen(0, rc<void*>(::pamConversationManagerV1_method0));
+    m_object->listen(1, rc<void*>(::pamConversationManagerV1_method1));
 }
 
 CCPamConversationManagerV1Object::~CCPamConversationManagerV1Object() {
@@ -38,14 +45,18 @@ SP<Hyprwire::IObject> CCPamConversationManagerV1Object::sendMakeConversation() {
     return m_object->clientSock()->objectForId(_id);
 }
 
+void CCPamConversationManagerV1Object::setResponseChannel(std::function<void(int)>&& fn) {
+    m_listeners.response_channel = std::move(fn);
+}
+
 void CCPamConversationManagerV1Object::setDestroy(std::function<void()>&& fn) {
     m_listeners.destroy = std::move(fn);
 }
 
-static void pamConversationV1_method0(Hyprwire::IObject* r, int messageFd) {
-    auto& fn = rc<CCPamConversationV1Object*>(r->getData())->m_listeners.response_channel;
+static void pamConversationV1_method0(Hyprwire::IObject* r) {
+    auto& fn = rc<CCPamConversationV1Object*>(r->getData())->m_listeners.start;
     if (fn)
-        fn(messageFd);
+        fn();
 }
 
 CCPamConversationV1Object::CCPamConversationV1Object(Hyprutils::Memory::CSharedPointer<Hyprwire::IObject>&& object) : m_object(std::move(object)) {
@@ -77,8 +88,8 @@ void CCPamConversationV1Object::sendFail(const char* token_bytes, const char* me
     m_object->call(4, token_bytes, message);
 }
 
-void CCPamConversationV1Object::setResponseChannel(std::function<void(int)>&& fn) {
-    m_listeners.response_channel = std::move(fn);
+void CCPamConversationV1Object::setStart(std::function<void()>&& fn) {
+    m_listeners.start = std::move(fn);
 }
 
 CCHyprauthPamV1Impl::CCHyprauthPamV1Impl(uint32_t ver) : m_version(ver) {

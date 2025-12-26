@@ -48,6 +48,11 @@ Hyprwire::SMethod{
 	std::vector<Hyprwire::SMethod>                m_s2c = {
 Hyprwire::SMethod{
 .idx = 0,
+.params = { Hyprwire::HW_MESSAGE_MAGIC_TYPE_FD },
+.since = 0,
+},
+Hyprwire::SMethod{
+.idx = 1,
 .params = {  },
 .since = 0,
 }
@@ -109,7 +114,7 @@ Hyprwire::SMethod{
 	std::vector<Hyprwire::SMethod>                m_s2c = {
 Hyprwire::SMethod{
 .idx = 0,
-.params = { Hyprwire::HW_MESSAGE_MAGIC_TYPE_FD },
+.params = {  },
 .since = 0,
 }
     };
