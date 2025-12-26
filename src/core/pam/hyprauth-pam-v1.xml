@@ -1,7 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <protocol name="hyprauth_pam_v1" version="1">
   <copyright>
-    Hyprauth contributors. #TODO:
+    Copyright © 2025 Hyprauth contributors.
+
+    Licensed under BSD 3-Clause. A copy of the license can be found in the repository root.
   </copyright>
 
   <enum name="internal_error">
