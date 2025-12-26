@@ -9,10 +9,33 @@
   
 */
 
+
 #pragma once
 
 #include <functional>
 #include "hyprauth_pam_v1-spec.hpp"
+    
+class CCPamConversationManagerV1Object {
+  public:
+    CCPamConversationManagerV1Object(Hyprutils::Memory::CSharedPointer<Hyprwire::IObject>&& object);
+    ~CCPamConversationManagerV1Object();
+
+    Hyprutils::Memory::CSharedPointer<Hyprwire::IObject> getObject() {
+        return m_object.lock();
+    }
+
+
+    Hyprutils::Memory::CSharedPointer<Hyprwire::IObject> sendMakeConversation();
+            
+    void setDestroy(std::function<void()>&& fn);
+            
+  private:
+	struct {
+ std::function<void()> destroy;
+ } m_listeners;
+        
+    Hyprutils::Memory::CWeakPointer<Hyprwire::IObject> m_object;
+};
 
 class CCPamConversationV1Object {
   public:
@@ -23,31 +46,24 @@ class CCPamConversationV1Object {
         return m_object.lock();
     }
 
-    void sendClientReady();
-
-    void sendSuccess(const char* token_bytes);
-
-    void sendFail(const char* token_bytes, const char* message);
 
     void sendPamPrompt(const char* message);
-
+            
     void sendPamTextInfo(const char* message);
-
+            
     void sendPamErrorMsg(const char* message);
-
-    void setStart(std::function<void()>&& fn);
-
-    void setFinished(std::function<void()>&& fn);
-
-    void setPamResponseChannel(std::function<void(int)>&& fn);
-
+            
+    void sendSuccess(const char* token_bytes);
+            
+    void sendFail(const char* token_bytes, const char* message);
+            
+    void setResponseChannel(std::function<void(int)>&& fn);
+            
   private:
-    struct {
-        std::function<void()>    start;
-        std::function<void()>    finished;
-        std::function<void(int)> pam_response_channel;
-    } m_listeners;
-
+	struct {
+ std::function<void(int)> response_channel;
+ } m_listeners;
+        
     Hyprutils::Memory::CWeakPointer<Hyprwire::IObject> m_object;
 };
 
@@ -56,7 +72,7 @@ class CCHyprauthPamV1Impl : public Hyprwire::IProtocolClientImplementation {
     CCHyprauthPamV1Impl(uint32_t version);
     virtual ~CCHyprauthPamV1Impl() = default;
 
-    virtual Hyprutils::Memory::CSharedPointer<Hyprwire::IProtocolSpec>                            protocol();
+    virtual Hyprutils::Memory::CSharedPointer<Hyprwire::IProtocolSpec> protocol();
 
     virtual std::vector<Hyprutils::Memory::CSharedPointer<Hyprwire::SClientObjectImplementation>> implementation();
 

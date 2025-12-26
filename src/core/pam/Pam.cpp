@@ -30,48 +30,55 @@ CPam::CPam(AuthProviderToken tok, IAuthProvider::SPamCreationData data) : IAuthP
     }
 
     m_wire.spec = makeShared<CHyprauthPamV1Impl>(HYPRAUTH_PAM_PROTOCOL_VERSION, [this](SP<Hyprwire::IObject> obj) {
-        m_wire.com = makeUnique<CPamConversationV1Object>(std::move(obj));
-        m_wire.com->setClientReady([this]() {
-            g_auth->log(LOG_TRACE, "(PAM S) C Ready!");
+        m_wire.manager = makeUnique<CPamConversationManagerV1Object>(std::move(obj));
+        m_wire.manager->setMakeConversation([this](uint32_t seq) {
+            g_auth->log(LOG_TRACE, "(PAM S) Client is here to conversate!");
+            m_wire.conversation = makeUnique<CPamConversationV1Object>(m_wire.sock->createObject(m_wire.manager->getObject()->client(), m_wire.manager->getObject(), "pam_conversation_v1", seq));
+
+            m_wire.conversation->setPamPrompt([this](const char* msg) {
+                g_auth->log(LOG_TRACE, "(PAM S) prompt: {}", msg);
+                g_auth->providerPrompt(m_tok, msg);
+            });
+            m_wire.conversation->setPamTextInfo([](const char* msg) { g_auth->log(LOG_DEBUG, "(PAM S) text info: {}", msg); });
+            m_wire.conversation->setPamErrorMsg([this](const char* msg) {
+                g_auth->log(LOG_ERR, "(PAM S) error: {}", msg);
+                // Targets this log from pam_faillock: https://github.com/linux-pam/linux-pam/blob/fa3295e079dbbc241906f29bde5fb71bc4172771/modules/pam_faillock/pam_faillock.c#L417
+                if (const auto MSG = std::string_view(msg); MSG.contains("left to unlock"))
+                    m_failTextOverride = MSG;
+            });
+            m_wire.conversation->setFail([this](const char* token_bytes, const char* msg) {
+                g_auth->log(LOG_TRACE, "(PAM S) Recieved failure");
+                AuthProviderToken tok = *rc<const AuthProviderToken*>(token_bytes);
+                if (!m_failTextOverride.empty()) {
+                    g_auth->providerFail(tok, m_failTextOverride);
+                    m_failTextOverride.clear();
+                } else
+                    g_auth->providerFail(tok, msg);
+            });
+            m_wire.conversation->setSuccess([this](const char* token_bytes) {
+                g_auth->log(LOG_TRACE, "(PAM S) Recieved success");
+                AuthProviderToken tok = *rc<const AuthProviderToken*>(token_bytes);
+                g_auth->providerSuccess(tok);
+                m_wire.manager->sendDestroy();
+            });
+
+            m_wire.conversation->setOnDestroy([this]() {
+                g_auth->log(LOG_TRACE, "(PAM S) Conversation done");
+                m_inputPipe.reset();
+            });
+
             // First thing when client is ready -> send the channel fd!
             int responseFds[2];
             RASSERT(!pipe(responseFds), "Couldn't create pam response channel pipes :(");
             m_inputPipe = CFileDescriptor(responseFds[1]);
-            m_wire.com->sendPamResponseChannel(responseFds[0]);
+            m_wire.conversation->sendResponseChannel(responseFds[0]);
             close(responseFds[0]);
-            m_wire.com->sendStart();
         });
-        m_wire.com->setPamPrompt([this](const char* msg) {
-            g_auth->log(LOG_TRACE, "(PAM S) prompt: {}", msg);
-            g_auth->providerPrompt(m_tok, msg);
-        });
-        m_wire.com->setPamTextInfo([](const char* msg) { g_auth->log(LOG_DEBUG, "(PAM S) text info: {}", msg); });
-        m_wire.com->setPamErrorMsg([this](const char* msg) {
-            g_auth->log(LOG_ERR, "(PAM S) error: {}", msg);
-            // Targets this log from pam_faillock: https://github.com/linux-pam/linux-pam/blob/fa3295e079dbbc241906f29bde5fb71bc4172771/modules/pam_faillock/pam_faillock.c#L417
-            if (const auto MSG = std::string_view(msg); MSG.contains("left to unlock"))
-                m_failTextOverride = MSG;
-        });
-        m_wire.com->setFail([this](const char* token_bytes, const char* msg) {
-            g_auth->log(LOG_TRACE, "(PAM S) Recieved failure");
-            AuthProviderToken tok = *rc<const AuthProviderToken*>(token_bytes);
-            if (!m_failTextOverride.empty()) {
-                g_auth->providerFail(tok, m_failTextOverride);
-                m_failTextOverride.clear();
-            } else
-                g_auth->providerFail(tok, msg);
 
-            m_wire.com->sendStart();
-        });
-        m_wire.com->setSuccess([](const char* token_bytes) {
-            g_auth->log(LOG_TRACE, "(PAM S) Recieved success");
-            AuthProviderToken tok = *rc<const AuthProviderToken*>(token_bytes);
-            g_auth->providerSuccess(tok);
-        });
-        m_wire.com->setOnDestroy([this]() { //
-            g_auth->log(LOG_DEBUG, "(PAM S) Client destroyed");
+        m_wire.manager->setOnDestroy([this]() { //
+            g_auth->log(LOG_DEBUG, "(PAM S) Manager destroyed");
             m_inputPipe.reset();
-            m_wire.com.reset();
+            m_wire.manager.reset();
         });
     });
 }
@@ -94,12 +101,13 @@ void CPam::start() {
         // CHILD (Pam client)
         close(sockFds[0]);
         auto client = makeUnique<CPamClient>(sockFds[1], m_tok, m_data);
+        client->start();
 
         g_auth->log(LOG_TRACE, "(PAM C) Client entering eventloop!");
         while (client->m_wire.sock->dispatchEvents(true))
             ;
 
-        exit(1); // This is an error. We exit directly within the finished event.
+        exit(1); // This is an error. We exit directly within the destoy event.
     } else {
         // PARENT (Authenticator)
         close(sockFds[1]);
@@ -110,8 +118,6 @@ void CPam::start() {
         pollfd pfd = {.fd = sockFds[0], .events = POLLIN, .revents = 0};
         RASSERT(poll(&pfd, 1, 1000) > 0 && (pfd.revents & POLLIN), "Failed to wait for client hello");
         RASSERT(m_wire.sock->addClient(sockFds[0]) != nullptr, "Failed to add client fd");
-        while (!m_wire.com)
-            m_wire.sock->dispatchEvents(true);
 
         g_auth->log(LOG_TRACE, "(PAM S) Init done!");
     }
@@ -140,8 +146,8 @@ bool CPam::dispatchEvents() {
 }
 
 void CPam::terminate() {
-    if (m_wire.com)
-        m_wire.com->sendFinished();
+    if (m_wire.manager)
+        m_wire.manager->sendDestroy();
 
     if (m_inputPipe.isValid())
         sendSecretBuffer(m_inputPipe.get(), std::string_view{"", 0});

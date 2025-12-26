@@ -18,9 +18,10 @@ namespace Hyprauth {
         CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::SPamCreationData& data);
 
         struct {
-            Hyprutils::Memory::CSharedPointer<CCHyprauthPamV1Impl>       spec;
-            Hyprutils::Memory::CSharedPointer<Hyprwire::IClientSocket>   sock;
-            Hyprutils::Memory::CUniquePointer<CCPamConversationV1Object> com;
+            Hyprutils::Memory::CSharedPointer<CCHyprauthPamV1Impl>              spec;
+            Hyprutils::Memory::CSharedPointer<Hyprwire::IClientSocket>          sock;
+            Hyprutils::Memory::CUniquePointer<CCPamConversationManagerV1Object> manager;
+            Hyprutils::Memory::CUniquePointer<CCPamConversationV1Object>        conversation;
         } m_wire;
 
         AuthProviderToken               m_tok;
@@ -29,9 +30,7 @@ namespace Hyprauth {
         Hyprutils::OS::CFileDescriptor  m_responsePipe;
         CSecretBuffer                   m_responseData;
 
-        bool                            m_exit               = false;
-        bool                            m_conversationActive = false;
-
+        void                            start();
         void                            auth();
     };
 }

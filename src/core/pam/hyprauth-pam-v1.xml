@@ -9,50 +9,32 @@
     <value idx="1" name="server" description="server error"/>
   </enum>
 
-  <object name="pam_conversation_v1" version="1">
-    <description summary="manager object">
-      This object facilitates a pam conversation over the wire.
+  <object name="pam_conversation_manager_v1" version="1">
+    <description summary="Manager object">
+      Facilitate the creation of a pam conversation object.
     </description>
 
-    <c2s name="client_ready">
-      <description summary="Client is ready">
-        Notify the server that we are ready to recieve the pam response channel.
+    <c2s name="make_conversation">
+      <description>
+        Create a pam converation object.
       </description>
+      <returns iface="pam_conversation_v1"/>
     </c2s>
 
-    <s2c name="start">
-      <description summary="Start pam authentication">
-        Start pam authentication for the currently active user session.
-        Sending this before client_ready is a protocol error.
-        As long as the authentication try hasn't concluded
-        with a success or fail event, sending start again is a protocol error.
-      </description>
-    </s2c>
-
-    <c2s name="success">
-      <description summary="Submit authentication success">
-        Success event from the pam client.
-        The server must ignore this in case token_bytes does not match the corresponding provider token on the server side.
-      </description>
-      <arg name="token_bytes" type="varchar" summary="token bytes"/>
-    </c2s>
-
-    <c2s name="fail">
-      <description summary="Sumbit authentication failure">
-        Failure event from the pam client.
-        The server must ignore this in case token_bytes does not match the corresponding provider token on the server side.
-      </description>
-      <arg name="token_bytes" type="varchar" summary="token bytes"/>
-      <arg name="message" type="varchar" summary="token bytes"/>
-    </c2s>
-
-    <s2c name="finished">
+    <s2c name="destroy" destructor="true">
       <description summary="We are done here. Make the client exit.">
-         The server may decide to send this at any time. The client is expected to exit gracefully.
+        The server may decide to send this at any time. The client is expected to exit gracefully.
       </description>
     </s2c>
 
-    <s2c name="pam_response_channel">
+  </object>
+
+  <object name="pam_conversation_v1" version="1">
+    <description summary="Pam converation object">
+      This object represents a pam conversation over the wire.
+    </description>
+
+    <s2c name="response_channel">
       <description summary="Send the pam response file descriptor">
         The server must send this file descriptor immediatly.
         It is then used to send password or other authentication prompt responses to the conversation.
@@ -81,6 +63,23 @@
         PAM_ERROR_MSG messages from pam.
       </description>
       <arg name="message" type="varchar" summary="message"/>
+    </c2s>
+
+    <c2s name="success">
+      <description summary="Submit authentication success">
+        Success event from the pam client.
+        The server must ignore this in case token_bytes does not match the corresponding provider token on the server side.
+      </description>
+      <arg name="token_bytes" type="varchar" summary="token bytes"/>
+    </c2s>
+
+    <c2s name="fail">
+      <description summary="Sumbit authentication failure">
+        Failure event from the pam client.
+        The server must ignore this in case token_bytes does not match the corresponding provider token on the server side.
+      </description>
+      <arg name="token_bytes" type="varchar" summary="token bytes"/>
+      <arg name="message" type="varchar" summary="token bytes"/>
     </c2s>
 
   </object>

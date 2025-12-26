@@ -46,6 +46,7 @@ CAuthenticator::CAuthenticator(const IAuthenticator::SAuthenticatorCreationData&
     if (data.pLogConnection) {
         m_logger = data.pLogConnection;
         m_logger->setName("hyprauth");
+        TRACE(m_logger->setLogLevel(LOG_TRACE));
     }
 }
 
@@ -103,7 +104,7 @@ void CAuthenticator::providerFail(AuthProviderToken tok, const std::string& fail
     if (!getProvider(tok))
         return;
 
-    log(LOG_TRACE, "Authentication fail {}", failText);
+    log(LOG_TRACE, "Authentication fail text: {}", failText);
 
     m_events.fail.emit(SAuthFailData{.tok = tok, .failText = failText});
 }

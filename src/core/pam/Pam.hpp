@@ -32,10 +32,11 @@ namespace Hyprauth {
 
       private:
         struct {
-            Hyprutils::Memory::CSharedPointer<CHyprauthPamV1Impl>       spec;
-            Hyprutils::Memory::CSharedPointer<Hyprwire::IServerSocket>  sock;
-            Hyprutils::Memory::CUniquePointer<CPamConversationV1Object> com;
-            int                                                         sockFd = -1; // we keep this just to remove the client later
+            Hyprutils::Memory::CSharedPointer<CHyprauthPamV1Impl>              spec;
+            Hyprutils::Memory::CSharedPointer<Hyprwire::IServerSocket>         sock;
+            Hyprutils::Memory::CUniquePointer<CPamConversationManagerV1Object> manager;
+            Hyprutils::Memory::CUniquePointer<CPamConversationV1Object>        conversation;
+            int                                                                sockFd = -1; // we keep this just to remove the client later
         } m_wire;
 
         Hyprutils::OS::CFileDescriptor m_inputPipe;

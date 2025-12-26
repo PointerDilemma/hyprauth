@@ -30,32 +30,27 @@ CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::S
     const auto SPEC = m_wire.sock->getSpec(m_wire.spec->protocol()->specName());
     RASSERT(SPEC, "(PAM C) Internal protocol error (unsupported version?)")
 
-    m_wire.com = makeUnique<CCPamConversationV1Object>(m_wire.sock->bindProtocol(m_wire.spec->protocol(), HYPRAUTH_PAM_PROTOCOL_VERSION));
-    m_wire.com->setStart([this]() {
-        if (m_conversationActive) {
-            m_wire.com->getObject()->error(HYPRAUTH_PAM_V1_INTERNAL_ERROR_CLIENT, "Already started");
-            return;
-        }
-
-        auth();
-    });
-    m_wire.com->setFinished([this]() {
-        g_auth->log(LOG_TRACE, "(PAM C) recieved finished! Will exit.");
-        m_exit = true;
-        m_wire.com.reset();
-        // I didn't find a fast way to exit the pam conversation.
-        // Returning from the conversation with PAM_CONV_ERR seems to employ a fail delay.
+    m_wire.manager = makeUnique<CCPamConversationManagerV1Object>(m_wire.sock->bindProtocol(m_wire.spec->protocol(), HYPRAUTH_PAM_PROTOCOL_VERSION));
+    m_wire.manager->setDestroy([this]() {
+        g_auth->log(LOG_TRACE, "(PAM C) Server send destroy! Will exit.");
         exit(0);
     });
-    m_wire.com->setPamResponseChannel([this](int fd) {
+}
+
+void CPamClient::start() {
+    m_wire.conversation = makeUnique<CCPamConversationV1Object>(m_wire.manager->sendMakeConversation());
+    m_wire.conversation->setResponseChannel([this](int fd) {
         g_auth->log(LOG_TRACE, "(PAM C) Got responsePipeFd {}", fd);
         m_responsePipe = CFileDescriptor(fd);
+
+        auth();
+
+        g_auth->log(LOG_TRACE, "(PAM C) This authentication try is done!", fd);
+        m_responsePipe.reset();
+
+        // restart (this is not recursive, we are in a function handler here)
+        start();
     });
-
-    m_wire.com->sendClientReady();
-    m_wire.sock->roundtrip();
-
-    RASSERT(m_responsePipe.isValid(), "(PAM C) No response channel pipe after roundtrip?");
 }
 
 int conv(int num_msg, const struct pam_message** msg, struct pam_response** resp, void* appdata_ptr) {
@@ -75,7 +70,7 @@ int conv(int num_msg, const struct pam_message** msg, struct pam_response** resp
                 // When the prompt is the same as the last one, I guess our answer can be the same.
                 if (PROMPTCHANGED) {
                     prompt = PROMPT;
-                    CLIENT->m_wire.com->sendPamPrompt(PROMPT.data());
+                    CLIENT->m_wire.conversation->sendPamPrompt(PROMPT.data());
                     CLIENT->m_wire.sock->roundtrip();
                     g_auth->log(LOG_TRACE, "(PAM C) waiting for password!");
                     if (!recvSecretBuffer(CLIENT->m_responsePipe.get(), CLIENT->m_responseData))
@@ -86,8 +81,8 @@ int conv(int num_msg, const struct pam_message** msg, struct pam_response** resp
 
                 pamReply[i].resp = strdup(CLIENT->m_responseData.c_str());
             } break;
-            case PAM_ERROR_MSG: CLIENT->m_wire.com->sendPamErrorMsg(msg[i]->msg); break;
-            case PAM_TEXT_INFO: CLIENT->m_wire.com->sendPamTextInfo(msg[i]->msg); break;
+            case PAM_ERROR_MSG: CLIENT->m_wire.conversation->sendPamErrorMsg(msg[i]->msg); break;
+            case PAM_TEXT_INFO: CLIENT->m_wire.conversation->sendPamTextInfo(msg[i]->msg); break;
         }
     }
 
@@ -96,7 +91,6 @@ int conv(int num_msg, const struct pam_message** msg, struct pam_response** resp
 }
 
 void CPamClient::auth() {
-    m_conversationActive    = true;
     const auto     USERNAME = g_auth->getUserName();
 
     const pam_conv localConv            = {.conv = conv, .appdata_ptr = this};
@@ -108,7 +102,7 @@ void CPamClient::auth() {
     ret     = pam_start(m_data.module.c_str(), USERNAME.c_str(), &localConv, &handle);
 
     if (ret != PAM_SUCCESS) {
-        m_wire.com->sendFail(tokenBytes, std::format("pam_start failed for module {}", m_data.module).c_str());
+        m_wire.conversation->sendFail(tokenBytes, std::format("pam_start failed for module {}", m_data.module).c_str());
         return;
     }
 
@@ -125,10 +119,7 @@ void CPamClient::auth() {
     handle = nullptr;
 
     if (ret != PAM_SUCCESS)
-        m_wire.com->sendFail(tokenBytes, (ret != PAM_AUTH_ERR && PAMERR) ? PAMERR : "Authentication failed");
-    else {
-        m_wire.com->sendSuccess(tokenBytes);
-    }
-
-    m_conversationActive = false;
+        m_wire.conversation->sendFail(tokenBytes, (ret != PAM_AUTH_ERR && PAMERR) ? PAMERR : "Authentication failed");
+    else
+        m_wire.conversation->sendSuccess(tokenBytes);
 }
