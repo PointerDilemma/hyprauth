@@ -24,4 +24,5 @@ build/
 tests/generated/
 
 *.inc
-src/renderer/gl/shaders/Shaders.hpp
+src/core/pam/generated/*.{cpp, hpp}
+.gdb_history
