@@ -10,10 +10,10 @@
 using namespace Hyprauth;
 using namespace Hyprutils::CLI;
 
-static const auto FPRINT              = sdbus::ServiceName{"net.reactivated.Fprint"};
-static const auto DEVICE              = sdbus::ServiceName{"net.reactivated.Fprint.Device"};
-static const auto MANAGER             = sdbus::ServiceName{"net.reactivated.Fprint.Manager"};
-static const auto LOG_DEBUGIN_MANAGER = sdbus::ServiceName{"org.freedesktop.login1.Manager"};
+static const auto FPRINT            = sdbus::ServiceName{"net.reactivated.Fprint"};
+static const auto DEVICE            = sdbus::ServiceName{"net.reactivated.Fprint.Device"};
+static const auto MANAGER           = sdbus::ServiceName{"net.reactivated.Fprint.Manager"};
+static const auto LOG_LOGIN_MANAGER = sdbus::ServiceName{"org.freedesktop.login1.Manager"};
 
 enum MatchResult {
     MATCH_INVALID = 0,
@@ -51,25 +51,30 @@ void CFprintDbus::start() {
     }
 
     m_dbusState.login->getPropertyAsync("PreparingForSleep")
-        .onInterface(LOG_DEBUGIN_MANAGER)
+        .onInterface(LOG_LOGIN_MANAGER)
         .uponReplyInvoke([this](std::optional<sdbus::Error> e, sdbus::Variant preparingForSleep) {
             if (e) {
                 g_auth->log(LOG_WARN, "(FP) Failed getting value for PreparingForSleep: {}", e->what());
                 return;
             }
+
             m_dbusState.sleeping = preparingForSleep.get<bool>();
+            g_auth->log(LOG_TRACE, "(FP) Sleeping state: {}", m_dbusState.sleeping);
+
             // When entering sleep, the wake signal will trigger startVerify().
             if (m_dbusState.sleeping)
                 return;
 
             startVerify();
         });
-    m_dbusState.login->uponSignal("PrepareForSleep").onInterface(LOG_DEBUGIN_MANAGER).call([this](bool start) {
+    m_dbusState.login->uponSignal("PrepareForSleep").onInterface(LOG_LOGIN_MANAGER).call([this](bool start) {
         g_auth->log(LOG_DEBUG, "(FP) PrepareForSleep (start: {})", start);
         m_dbusState.sleeping = start;
         if (!m_dbusState.sleeping && !m_dbusState.verifying)
             startVerify();
     });
+
+    dispatchEvents();
 }
 
 void CFprintDbus::handleInput(const std::string_view input) {
@@ -189,13 +194,14 @@ void CFprintDbus::startVerify() {
         return;
     }
 
-    if (!m_dbusState.device) {
-        if (!createDeviceProxy())
-            return;
+    if (!m_dbusState.device && !createDeviceProxy())
+        return;
 
-        claimDevice();
+    if (!m_dbusState.deviceClaimed) {
+        claimDevice(); // startVerify will get called in the handler for the "Claim" method
         return;
     }
+
     const auto FINGER = "any"; // Any finger.
     m_dbusState.device->callMethodAsync("VerifyStart").onInterface(DEVICE).withArguments(FINGER).uponReplyInvoke([this](std::optional<sdbus::Error> e) {
         if (e) {
