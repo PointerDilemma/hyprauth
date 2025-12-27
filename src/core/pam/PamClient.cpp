@@ -1,7 +1,6 @@
 #include "PamClient.hpp"
 #include "../Authenticator.hpp"
-
-#include <hyprauth/core/SecretBuffer.hpp>
+#include "../../helpers/SendRecv.hpp"
 
 #include <security/pam_appl.h>
 #if __has_include(<security/pam_misc.h>)
@@ -12,8 +11,7 @@ using namespace Hyprauth;
 using namespace Hyprutils::CLI;
 using namespace Hyprutils::OS;
 
-CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::SPamCreationData& data) :
-    m_tok(tok), m_data(data), m_responseData(HYPRAUTH_SECRETBUFFER_DEFAULT_SIZE) {
+CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::SPamCreationData& data) : m_tok(tok), m_data(data) {
     m_wire.spec = makeShared<CCHyprauthPamV1Impl>(HYPRAUTH_PAM_PROTOCOL_VERSION);
     m_wire.sock = Hyprwire::IClientSocket::open(sockFd);
     if (!m_wire.sock) {
@@ -39,17 +37,18 @@ CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::S
     m_wire.manager->setResponseChannel([this](int fd) {
         g_auth->log(LOG_TRACE, "(PAM C) Got responsePipeFd {}", fd);
         m_responsePipe = CFileDescriptor(fd);
-    });
 
-    m_wire.conversation = makeUnique<CCPamConversationV1Object>(m_wire.manager->sendMakeConversation());
-    m_wire.conversation->setStart([this]() { auth(); });
+        m_wire.conversation = makeUnique<CCPamConversationV1Object>(m_wire.manager->sendMakeConversation());
+        m_wire.conversation->setStart([this]() { auth(); });
+    });
 }
 
 int conv(int num_msg, const struct pam_message** msg, struct pam_response** resp, void* appdata_ptr) {
     const auto           CLIENT   = (CPamClient*)appdata_ptr;
     struct pam_response* pamReply = (struct pam_response*)calloc(num_msg, sizeof(struct pam_response));
 
-    std::string          prompt = "";
+    std::string          prompt   = "";
+    std::string          response = "";
 
     for (int i = 0; i < num_msg; ++i) {
         switch (msg[i]->msg_style) {
@@ -65,13 +64,14 @@ int conv(int num_msg, const struct pam_message** msg, struct pam_response** resp
                     CLIENT->m_wire.conversation->sendPamPrompt(PROMPT.data());
                     CLIENT->m_wire.sock->roundtrip();
                     g_auth->log(LOG_TRACE, "(PAM C) waiting for password!");
-                    if (!recvSecretBuffer(CLIENT->m_responsePipe.get(), CLIENT->m_responseData))
+
+                    if (!recvView(CLIENT->m_responsePipe.get(), response))
                         g_auth->log(LOG_ERR, "(PAM C) failed to recieve password input!");
 
                     CLIENT->m_wire.sock->dispatchEvents(false);
                 }
 
-                pamReply[i].resp = strdup(CLIENT->m_responseData.c_str());
+                pamReply[i].resp = strdup(response.c_str());
             } break;
             case PAM_ERROR_MSG: CLIENT->m_wire.conversation->sendPamErrorMsg(msg[i]->msg); break;
             case PAM_TEXT_INFO: CLIENT->m_wire.conversation->sendPamTextInfo(msg[i]->msg); break;

@@ -1,4 +1,3 @@
-#include <hyprauth/core/SecretBuffer.hpp>
 #include <hyprauth/hyprauth.hpp>
 #include <hyprutils/cli/Logger.hpp>
 #include <print>
@@ -27,9 +26,6 @@ void terminalEcho(bool enable = false) {
 }
 
 int main(int argc, char** argv, char** envp) {
-    CSecretBuffer passBuf(0x1000);
-
-    protectStdin();
     terminalEcho(false);
 
     Hyprutils::CLI::CLogger                    logger;
@@ -82,13 +78,10 @@ int main(int argc, char** argv, char** envp) {
                 authenticator->terminate();
                 break;
             }
-            if (line == "ThisStringShouldOnlyInTheELF(RO)DataSectionOfTheCoredump")
-                std::abort();
+            if (line == "crash")
+                *((int*)0) = 0;
 
-            passBuf.feed(line);
-            line.clear();
-            authenticator->submitInput(passBuf.view());
-            passBuf.clear();
+            authenticator->submitInput(line);
         }
 
         bool good = false;

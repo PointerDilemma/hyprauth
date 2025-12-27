@@ -1,7 +1,6 @@
 #pragma once
 
 #include <hyprauth/hyprauth.hpp>
-#include <hyprauth/core/SecretBuffer.hpp>
 
 #include <hyprutils/memory/SharedPtr.hpp>
 #include <hyprutils/memory/UniquePtr.hpp>
@@ -28,7 +27,6 @@ namespace Hyprauth {
         IAuthProvider::SPamCreationData m_data;
 
         Hyprutils::OS::CFileDescriptor  m_responsePipe;
-        CSecretBuffer                   m_responseData;
 
         void                            auth();
     };

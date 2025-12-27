@@ -3,6 +3,7 @@
 
 #include "../Authenticator.hpp"
 #include "../../helpers/Memory.hpp"
+#include "../../helpers/SendRecv.hpp"
 #include "../../Macros.hpp"
 
 #include <hyprwire/hyprwire.hpp>
@@ -73,6 +74,7 @@ CPam::CPam(AuthProviderToken tok, IAuthProvider::SPamCreationData data) : IAuthP
                 m_wire.conversation.reset();
             });
 
+            m_wire.sock->dispatchEvents(false);
             m_wire.conversation->sendStart();
         });
 
@@ -134,7 +136,7 @@ void CPam::handleInput(const std::string_view input) {
     if (!m_inputPipe.isValid())
         return;
 
-    if (!sendSecretBuffer(m_inputPipe.get(), input))
+    if (!sendView(m_inputPipe.get(), input))
         g_auth->log(LOG_ERR, "(PAM S) Failed to send input to the pam client!");
 }
 
@@ -157,7 +159,7 @@ void CPam::terminate() {
         m_wire.manager->sendDestroy();
 
     if (m_inputPipe.isValid())
-        sendSecretBuffer(m_inputPipe.get(), std::string_view{"", 0});
+        sendView(m_inputPipe.get(), std::string_view{"", 0});
 
     dispatchEvents();
 
