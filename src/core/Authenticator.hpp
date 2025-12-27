@@ -7,15 +7,16 @@
 namespace Hyprauth {
     class CAuthenticator : public IAuthenticator {
       public:
-        CAuthenticator(const IAuthenticator::SAuthenticatorCreationData& data);
+        CAuthenticator(const SAuthenticatorCreationData& data);
 
         virtual void              addProvider(SP<IAuthProvider> impl);
-        virtual WP<IAuthProvider> getProvider(AuthProviderToken tok);
 
         virtual void              start();
         virtual void              terminate();
 
         virtual void              submitInput(const std::string_view input);
+
+        WP<IAuthProvider>  getProvider(AuthProviderToken tok);
 
         // Provider events
         void               providerPrompt(AuthProviderToken tok, const std::string& promptText);

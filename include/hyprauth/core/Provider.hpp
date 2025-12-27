@@ -6,21 +6,17 @@
 #include <hyprutils/memory/SharedPtr.hpp>
 
 namespace Hyprauth {
-    /*
-        AuthProviderToken's are used to identify an authentication provider.
-        A token must be used to submit providerSuccess and providerFail.
-        AuthProviderTokens should be randomly generated with `getProviderAuthProviderToken`.
-        Their randomization does not mean they necessarily provide a meaningful security barrier.
-        Rather, they exist to make the authenticator harder to exploit when having some contstrained control. Just in case.
-        For example in case somehow the socket fd for pam was accessible by an adverserial application,
-        they would need to know this randomized AuthProviderToken to trigger `CAuthenticator.m_authEvents.success`.
-    */
+    enum eAuthProvider: int8_t {
+        HYPRAUTH_PROVIDER_INVALID = -1,
+        HYPRAUTH_PROVIDER_PAM,
+        HYPRAUTH_PROVIDER_FPRINT,
+    };
+
     using AuthProviderToken = uint64_t;
-    AuthProviderToken getAuthProviderToken();
 
     class IAuthProvider {
       public:
-        IAuthProvider(AuthProviderToken tok, bool sendInput = false) : m_tok(tok), m_sendInput(sendInput) {};
+        IAuthProvider(eAuthProvider kind, bool sendInput = false) : m_kind(kind), m_sendInput(sendInput) {};
 
         virtual ~IAuthProvider() = default;
 
@@ -50,48 +46,49 @@ namespace Hyprauth {
         */
         virtual int       getLoopFd() = 0;
 
-        AuthProviderToken m_tok       = 0;
+        eAuthProvider     m_kind = HYPRAUTH_PROVIDER_INVALID;
+        AuthProviderToken m_tok       = 0; // set by CAuthenticator::addProvider
         bool              m_sendInput = false;
-
-        /*
-            BUILT-IN PROVIDERS
-        */
-        struct SPamCreationData {
-            explicit SPamCreationData();
-
-            /* Name of pam module in /etc/pam.d/<moduleName>. */
-            std::string module = "";
-
-            /*
-               When enabled, call pam_setcred with PAM_REFRESH_CRED after successful authentication.
-               This will extend the lifetime of existing credentials for the user's session.
-            */
-            bool extendUserCreds = false;
-        };
-
-        /*
-            Create pam authentication provider.
-        */
-        static Hyprutils::Memory::CSharedPointer<IAuthProvider> createPamProvider(const SPamCreationData& data);
-
-        struct SFprintCreationData {
-            explicit SFprintCreationData();
-
-            /*
-               Number of unmatched fingerprint checks before the provider refuses to accept further scans.
-               What number makes sense here depends a bit on your sensor.
-               Lot's of touch drivers (mostly unoffical libfprint) scan and fail rapidly because they are implemented poorly.
-               Those may need a higher limit here.
-            */
-            size_t numTries = 3;
-
-            /* Prompt message used when the device is ready */
-            std::string readyPrompt = "(Scan fingerprint to unlock)";
-        };
-
-        /*
-            Create fprint authentication provider. (Uses the dbus API from fprintd)
-        */
-        static Hyprutils::Memory::CSharedPointer<IAuthProvider> createFprintProvider(const SFprintCreationData& data);
     };
+
+    /*
+        BUILT-IN PROVIDERS
+    */
+    struct SPamCreationData {
+        SPamCreationData() = default;
+
+        /* Name of pam module in /etc/pam.d/<moduleName>. */
+        std::string module = "";
+
+        /*
+           When enabled, call pam_setcred with PAM_REFRESH_CRED after successful authentication.
+           This will extend the lifetime of existing credentials for the user's session.
+        */
+        bool extendUserCreds = false;
+    };
+
+    /*
+        Create pam authentication provider.
+    */
+    Hyprutils::Memory::CSharedPointer<IAuthProvider> createPamProvider(const SPamCreationData& data);
+
+    struct SFprintCreationData {
+        SFprintCreationData() = default;
+
+        /*
+           Number of unmatched fingerprint checks before the provider refuses to accept further scans.
+           What number makes sense here depends a bit on your sensor.
+           Lot's of touch drivers (mostly unoffical libfprint) scan and fail rapidly because they are implemented poorly.
+           Those may need a higher limit here.
+        */
+        size_t numTries = 3;
+
+        /* Prompt message used when the device is ready */
+        std::string readyPrompt = "(Scan fingerprint to unlock)";
+    };
+
+    /*
+        Create fprint authentication provider. (Uses the dbus API from fprintd)
+    */
+    Hyprutils::Memory::CSharedPointer<IAuthProvider> createFprintProvider(const SFprintCreationData& data);
 }

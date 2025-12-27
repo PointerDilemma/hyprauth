@@ -10,7 +10,7 @@ using namespace Hyprauth;
 using namespace Hyprutils::Memory;
 
 hyprauth_authenticator_t hyprauth_create(const char* user_name) {
-    IAuthenticator::SAuthenticatorCreationData data;
+    SAuthenticatorCreationData data;
     data.userName = user_name;
 
     auto authenticator = IAuthenticator::create(data);
@@ -31,11 +31,11 @@ hyprauth_provider_t hyprauth_add_pam_provider(hyprauth_authenticator_t auth, hyp
     if (g_auth.get() != auth)
         return 0;
 
-    IAuthProvider::SPamCreationData data;
+    SPamCreationData data;
     data.module          = (opts.pam_module) ? opts.pam_module : "";
     data.extendUserCreds = opts.extend_user_creds;
 
-    auto pam = IAuthProvider::createPamProvider(data);
+    auto pam = createPamProvider(data);
     if (!pam)
         return 0;
 
@@ -47,11 +47,11 @@ hyprauth_provider_t hyprauth_add_fprint_provider(hyprauth_authenticator_t auth, 
     if (g_auth.get() != auth)
         return 0;
 
-    IAuthProvider::SFprintCreationData data;
+    SFprintCreationData data;
     data.readyPrompt = (opts.ready_prompt) ? opts.ready_prompt : "";
     data.numTries    = opts.num_tries;
 
-    auto fprint = IAuthProvider::createFprintProvider(data);
+    auto fprint = createFprintProvider(data);
     if (!fprint)
         return 0;
 
@@ -101,7 +101,7 @@ void hyprauth_set_callbacks(hyprauth_authenticator_t auth, hyprauth_callbacks cb
     if (g_auth.get() != auth)
         return;
 
-    g_auth->m_events.prompt.listenStatic([userData, fun = cbs.hyprauth_cb_prompt](IAuthenticator::SAuthPromptData data) { fun(data.tok, data.promptText.c_str(), userData); });
-    g_auth->m_events.fail.listenStatic([userData, fun = cbs.hyprauth_cb_fail](IAuthenticator::SAuthFailData data) { fun(data.tok, data.failText.c_str(), userData); });
-    g_auth->m_events.success.listenStatic([userData, fun = cbs.hyprauth_cb_success](AuthProviderToken tok) { fun(tok, userData); });
+    g_auth->m_events.prompt.listenStatic([userData, fun = cbs.hyprauth_cb_prompt](IAuthenticator::SAuthPromptData data) { fun(data.from, data.promptText.c_str(), userData); });
+    g_auth->m_events.fail.listenStatic([userData, fun = cbs.hyprauth_cb_fail](IAuthenticator::SAuthFailData data) { fun(data.from, data.failText.c_str(), userData); });
+    g_auth->m_events.success.listenStatic([userData, fun = cbs.hyprauth_cb_success](eAuthProvider from) { fun(from, userData); });
 }

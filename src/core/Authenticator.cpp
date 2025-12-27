@@ -15,18 +15,23 @@
 using namespace Hyprauth;
 using namespace Hyprutils::CLI;
 
-IAuthenticator::SAuthenticatorCreationData::SAuthenticatorCreationData() = default;
-IAuthProvider::SPamCreationData::SPamCreationData()                      = default;
-IAuthProvider::SFprintCreationData::SFprintCreationData()                = default;
-
-AuthProviderToken Hyprauth::getAuthProviderToken() {
+/*
+    AuthProviderToken's are used to identify an authentication provider.
+    A token must be used to submit providerSuccess and providerFail.
+    AuthProviderTokens should be randomly generated with `getAuthProviderToken`.
+    Their randomization does not mean they necessarily provide a meaningful security barrier.
+    Rather, they exist to make the authenticator harder to exploit when having some contstrained control. Just in case.
+    For example in case somehow the socket fd for pam was accessible by an adverserial application,
+    they would need to know this randomized AuthProviderToken to trigger `CAuthenticator.m_authEvents.success`.
+*/
+static AuthProviderToken getAuthProviderToken() {
     std::ifstream     rnd("/dev/urandom", std::ios::in | std::ios::binary);
     AuthProviderToken res;
     rnd.read(rc<char*>(&res), sizeof(res));
     return res;
 }
 
-SP<IAuthenticator> IAuthenticator::create(const IAuthenticator::SAuthenticatorCreationData& data) {
+SP<IAuthenticator> IAuthenticator::create(const SAuthenticatorCreationData& data) {
     g_auth = makeShared<CAuthenticator>(data);
 
     if (g_auth && !Env::isDebug()) {
@@ -38,19 +43,19 @@ SP<IAuthenticator> IAuthenticator::create(const IAuthenticator::SAuthenticatorCr
     return g_auth;
 };
 
-SP<IAuthProvider> IAuthProvider::createPamProvider(const IAuthProvider::SPamCreationData& data) {
-    auto pam = makeShared<CPam>(getAuthProviderToken(), data);
+SP<IAuthProvider> Hyprauth::createPamProvider(const SPamCreationData& data) {
+    auto pam = makeShared<CPam>(data);
 
     return pam;
 };
 
-SP<IAuthProvider> IAuthProvider::createFprintProvider(const IAuthProvider::SFprintCreationData& data) {
-    auto fprint = makeShared<CFprintDbus>(getAuthProviderToken(), data);
+SP<IAuthProvider> Hyprauth::createFprintProvider(const SFprintCreationData& data) {
+    auto fprint = makeShared<CFprintDbus>(data);
 
     return fprint;
 };
 
-CAuthenticator::CAuthenticator(const IAuthenticator::SAuthenticatorCreationData& data) : m_data(data) {
+CAuthenticator::CAuthenticator(const SAuthenticatorCreationData& data) : m_data(data) {
     if (data.pLogConnection) {
         m_logger = data.pLogConnection;
         m_logger->setName("hyprauth");
@@ -59,9 +64,10 @@ CAuthenticator::CAuthenticator(const IAuthenticator::SAuthenticatorCreationData&
 }
 
 void CAuthenticator::addProvider(SP<IAuthProvider> impl) {
-    if (m_running || !impl || impl->m_tok == 0)
+    if (m_running || !impl || impl->m_kind == HYPRAUTH_PROVIDER_INVALID)
         return;
 
+    impl->m_tok = getAuthProviderToken();
     m_impls.emplace_back(std::move(impl));
 }
 
@@ -98,34 +104,37 @@ void CAuthenticator::terminate() {
 void CAuthenticator::providerPrompt(AuthProviderToken tok, const std::string& promptText) {
     std::lock_guard<std::mutex> lg(m_implEventMutex);
 
-    if (!getProvider(tok))
+    auto provider = getProvider(tok);
+    if (!provider)
         return;
 
     log(LOG_TRACE, "Prompt {}", promptText);
 
-    m_events.prompt.emit(SAuthPromptData{.tok = tok, .promptText = promptText});
+    m_events.prompt.emit(SAuthPromptData{.from = provider->m_kind, .promptText = promptText});
 }
 
 void CAuthenticator::providerFail(AuthProviderToken tok, const std::string& failText) {
     std::lock_guard<std::mutex> lg(m_implEventMutex);
 
-    if (!getProvider(tok))
+    auto provider = getProvider(tok);
+    if (!provider)
         return;
 
     log(LOG_TRACE, "Authentication fail text: {}", failText);
 
-    m_events.fail.emit(SAuthFailData{.tok = tok, .failText = failText});
+    m_events.fail.emit(SAuthFailData{.from = provider->m_kind, .failText = failText});
 }
 
 void CAuthenticator::providerSuccess(AuthProviderToken tok) {
     std::lock_guard<std::mutex> lg(m_implEventMutex);
 
-    if (!getProvider(tok))
+    auto provider = getProvider(tok);
+    if (!provider)
         return;
 
     log(LOG_TRACE, "Authentication successful!");
 
-    m_events.success.emit(tok);
+    m_events.success.emit(provider->m_kind);
 }
 
 const std::string& CAuthenticator::getUserName() {

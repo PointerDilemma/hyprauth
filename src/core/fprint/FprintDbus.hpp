@@ -9,7 +9,7 @@
 namespace Hyprauth {
     class CFprintDbus : public IAuthProvider {
       public:
-        CFprintDbus(AuthProviderToken tok, IAuthProvider::SFprintCreationData data);
+        CFprintDbus(SFprintCreationData data);
 
         virtual ~CFprintDbus() = default;
         virtual void                        start();
@@ -21,8 +21,7 @@ namespace Hyprauth {
         std::shared_ptr<sdbus::IConnection> getConnection();
 
       private:
-        AuthProviderToken                  m_tok;
-        IAuthProvider::SFprintCreationData m_data;
+        SFprintCreationData m_data;
 
         struct SDBUSState {
             std::shared_ptr<sdbus::IConnection> connection;

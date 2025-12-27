@@ -30,16 +30,16 @@ int main(int argc, char** argv, char** envp) {
 
     Hyprutils::CLI::CLogger                    logger;
 
-    IAuthenticator::SAuthenticatorCreationData data;
+    SAuthenticatorCreationData data;
     data.pLogConnection                           = makeShared<CLoggerConnection>(logger);
     auto                            authenticator = IAuthenticator::create(data);
 
-    IAuthProvider::SPamCreationData pamData;
+    SPamCreationData pamData;
     pamData.module          = "su";
     pamData.extendUserCreds = true;
-    auto pam                = IAuthProvider::createPamProvider(pamData);
+    auto pam                = createPamProvider(pamData);
 
-    auto fprint = IAuthProvider::createFprintProvider(IAuthProvider::SFprintCreationData{});
+    auto fprint = createFprintProvider(SFprintCreationData{});
 
     authenticator->addProvider(pam);
     authenticator->addProvider(fprint);
@@ -55,7 +55,7 @@ int main(int argc, char** argv, char** envp) {
         logger.log(LOG_WARN, "Fail text: {}, total fails: {}", data.failText, ++fails);
     });
 
-    authenticator->m_events.success.listenStatic([&logger, &authenticator, &success](AuthProviderToken tok) {
+    authenticator->m_events.success.listenStatic([&logger, &authenticator, &success](eAuthProvider tok) {
         logger.log(LOG_DEBUG, "Success!");
         success = true;
     });

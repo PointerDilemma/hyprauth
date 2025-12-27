@@ -19,7 +19,7 @@
 namespace Hyprauth {
     class CPam : public IAuthProvider {
       public:
-        CPam(AuthProviderToken tok, IAuthProvider::SPamCreationData data);
+        CPam(SPamCreationData data);
 
         virtual ~CPam();
         virtual void                    start();
@@ -28,7 +28,7 @@ namespace Hyprauth {
         virtual int                     getLoopFd();
         virtual void                    terminate();
 
-        IAuthProvider::SPamCreationData m_data;
+        SPamCreationData m_data;
 
       private:
         struct {

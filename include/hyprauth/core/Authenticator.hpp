@@ -10,19 +10,19 @@
 #include <hyprutils/cli/Logger.hpp>
 
 namespace Hyprauth {
+    struct SAuthenticatorCreationData {
+        SAuthenticatorCreationData() = default;
+
+        Hyprutils::Memory::CSharedPointer<Hyprutils::CLI::CLoggerConnection> pLogConnection;
+
+        /* Empty means currently active uid. */
+        std::string userName = "";
+    };
+
     class IAuthenticator {
       public:
         virtual ~IAuthenticator() = default;
         IAuthenticator()          = default;
-
-        struct SAuthenticatorCreationData {
-            explicit SAuthenticatorCreationData();
-
-            Hyprutils::Memory::CSharedPointer<Hyprutils::CLI::CLoggerConnection> pLogConnection;
-
-            /* Empty means currently active uid. */
-            std::string userName = "";
-        };
 
         /*
             Create an authenticator.
@@ -34,6 +34,7 @@ namespace Hyprauth {
         /*
             Hyprauth supports running multiple authentication providers in parallel.
             All providers need to be added before start().
+            Adding more than one provider with the same eAuthProvider (IAuthProvider::m_kind) is not supported.
         */
         virtual void addProvider(Hyprutils::Memory::CSharedPointer<IAuthProvider> impl) = 0;
 
@@ -49,12 +50,12 @@ namespace Hyprauth {
         virtual void submitInput(const std::string_view input) = 0;
 
         struct SAuthPromptData {
-            AuthProviderToken tok;
+            eAuthProvider     from;
             std::string       promptText;
         };
 
         struct SAuthFailData {
-            AuthProviderToken tok;
+            eAuthProvider     from;
             std::string       failText;
         };
 
@@ -73,7 +74,7 @@ namespace Hyprauth {
             /*
                 One of the authentication providers authenticated successfully.
             */
-            Hyprutils::Signal::CSignalT<AuthProviderToken> success;
+            Hyprutils::Signal::CSignalT<eAuthProvider> success;
 
         } m_events;
     };

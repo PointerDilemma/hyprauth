@@ -11,7 +11,7 @@ using namespace Hyprauth;
 using namespace Hyprutils::CLI;
 using namespace Hyprutils::OS;
 
-CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const IAuthProvider::SPamCreationData& data) : m_tok(tok), m_data(data) {
+CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const SPamCreationData& data) : m_tok(tok), m_data(data) {
     m_wire.spec = makeShared<CCHyprauthPamV1Impl>(HYPRAUTH_PAM_PROTOCOL_VERSION);
     m_wire.sock = Hyprwire::IClientSocket::open(sockFd);
     if (!m_wire.sock) {

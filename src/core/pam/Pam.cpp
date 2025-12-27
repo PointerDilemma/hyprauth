@@ -24,7 +24,7 @@ using namespace Hyprauth;
 using namespace Hyprutils::CLI;
 using namespace Hyprutils::OS;
 
-CPam::CPam(AuthProviderToken tok, IAuthProvider::SPamCreationData data) : IAuthProvider(tok, true), m_data(data) {
+CPam::CPam(SPamCreationData data) : IAuthProvider(HYPRAUTH_PROVIDER_PAM, true), m_data(data) {
     if (!std::filesystem::exists(std::filesystem::path("/etc/pam.d/") / m_data.module)) {
         g_auth->log(LOG_WARN, R"((PAM S) Module "/etc/pam.d/{}" does not exist! Falling back to "/etc/pam.d/su")", m_data.module);
         m_data.module = "su";

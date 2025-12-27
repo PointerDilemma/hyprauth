@@ -5,15 +5,15 @@
 #include <stdlib.h>
 #include <sys/poll.h>
 
-void handle_prompt(hyprauth_provider_t provider, const char* promptText, void* userData) {
+void handle_prompt(hyprauth_provider_enum_t provider, const char* promptText, void* userData) {
     printf("Prompt text: %s\n", promptText);
 }
 
-void handle_fail(hyprauth_provider_t provider, const char* failText, void* userData) {
+void handle_fail(hyprauth_provider_enum_t provider, const char* failText, void* userData) {
     printf("Fail text: %s\n", failText);
 }
 
-void handle_success(hyprauth_provider_t provider, void* userData) {
+void handle_success(hyprauth_provider_enum_t provider, void* userData) {
     printf("Success!\n");
     *(bool*)userData = true;
 }

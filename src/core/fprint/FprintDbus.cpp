@@ -36,7 +36,7 @@ static std::map<std::string, MatchResult> s_mapStringToTestType = {{"verify-no-m
                                                                    {"verify-disconnected", MATCH_DISCONNECTED},
                                                                    {"verify-unknown-error", MATCH_UNKNOWN_ERROR}};
 
-CFprintDbus::CFprintDbus(AuthProviderToken tok, IAuthProvider::SFprintCreationData data) : IAuthProvider(tok, false), m_tok(tok), m_data(data) {
+CFprintDbus::CFprintDbus(SFprintCreationData data) : IAuthProvider(HYPRAUTH_PROVIDER_FPRINT, false), m_data(data) {
     ;
 }
 
