@@ -11,12 +11,16 @@
 
 namespace Hyprauth {
     struct SAuthenticatorCreationData {
-        SAuthenticatorCreationData() = default;
-
         Hyprutils::Memory::CSharedPointer<Hyprutils::CLI::CLoggerConnection> pLogConnection;
 
         /* Empty means currently active uid. */
         std::string userName = "";
+
+        /*
+            When hyprauth is built in release mode, it uses setrlimit to disable coredumps.
+            Use this flag to disable this precaution.
+        */
+        bool allowCoredump = false;
     };
 
     class IAuthenticator {

@@ -20,8 +20,3 @@ bool Hyprauth::Env::isTrace() {
     static bool TRACE = envEnabled("HA_TRACE");
     return TRACE;
 }
-
-bool Hyprauth::Env::isDebug() {
-    static bool DEBUG = envEnabled("HA_DEBUG");
-    return DEBUG;
-}

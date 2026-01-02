@@ -25,7 +25,7 @@ static hyprauth_callbacks auth_callbacks = {
 };
 
 int main() {
-    hyprauth_authenticator_t auth_handle = hyprauth_create("");
+    hyprauth_authenticator_t auth_handle = hyprauth_create("", true);
 
     hyprauth_provider_t      pam_provider    = hyprauth_add_pam_provider(auth_handle, (hyprauth_pam_options){"su", true});
     hyprauth_provider_t      fprint_provider = hyprauth_add_fprint_provider(auth_handle, (hyprauth_fprint_options){NULL, 3});
@@ -54,8 +54,11 @@ int main() {
             line[nread - 1] = 0;
             if (strcmp(line, "exit") == 0) { // test async terminate
                 hyprauth_terminate(auth_handle);
+                free(line);
                 break;
             }
+            if (strcmp(line, "crash") == 0)
+                *((int*)0) = 0x1337;
 
             hyprauth_submit_input(auth_handle, line);
             free(line);

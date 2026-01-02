@@ -9,9 +9,10 @@
 using namespace Hyprauth;
 using namespace Hyprutils::Memory;
 
-hyprauth_authenticator_t hyprauth_create(const char* user_name) {
+hyprauth_authenticator_t hyprauth_create(const char* user_name, bool allow_coredump) {
     SAuthenticatorCreationData data;
     data.userName = user_name;
+    data.allowCoredump = allow_coredump;
 
     auto authenticator = IAuthenticator::create(data);
     if (!authenticator)

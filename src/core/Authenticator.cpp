@@ -34,11 +34,13 @@ static AuthProviderToken getAuthProviderToken() {
 SP<IAuthenticator> IAuthenticator::create(const SAuthenticatorCreationData& data) {
     g_auth = makeShared<CAuthenticator>(data);
 
-    if (g_auth && !Env::isDebug()) {
+#ifndef HYPRAUTH_DEBUG
+    if (g_auth && !data.allowCoredump) {
         const struct rlimit LIM{.rlim_cur = 0, .rlim_max = 0};
         if (setrlimit(RLIMIT_CORE, &LIM))
             g_auth->log(LOG_WARN, "Failed set RLIMIT_CORE to 0 (to disable coredumps): {}", strerror(errno));
     }
+#endif
 
     return g_auth;
 };

@@ -11,7 +11,7 @@ typedef void*            hyprauth_authenticator_t;
 typedef uint64_t         hyprauth_provider_t;
 typedef int8_t           hyprauth_provider_enum_t;
 
-hyprauth_authenticator_t hyprauth_create(const char* user_name);
+hyprauth_authenticator_t hyprauth_create(const char* user_name, bool allow_coredump);
 void                     hyprauth_destroy(hyprauth_authenticator_t auth);
 
 typedef struct {
