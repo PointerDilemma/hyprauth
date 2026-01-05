@@ -74,7 +74,6 @@ CPam::CPam(SPamCreationData data) : IAuthProvider(HYPRAUTH_PROVIDER_PAM, true), 
                 m_wire.conversation.reset();
             });
 
-            m_wire.sock->dispatchEvents(false);
             m_wire.conversation->sendStart();
         });
 
@@ -116,7 +115,7 @@ void CPam::start() {
         while (client->m_wire.sock->dispatchEvents(true))
             ;
 
-        exit(1); // This is an error. We exit directly within the destoy event.
+        exit(1); // This is an error. We exit directly within the destroy event.
     } else {
         // PARENT (Authenticator)
         close(sockFds[1]);
@@ -124,9 +123,11 @@ void CPam::start() {
         m_wire.sock   = Hyprwire::IServerSocket::open();
         m_wire.sock->addImplementation(m_wire.spec);
 
-        pollfd pfd = {.fd = sockFds[0], .events = POLLIN, .revents = 0};
-        RASSERT(poll(&pfd, 1, 1000) > 0 && (pfd.revents & POLLIN), "Failed to wait for client hello");
+        //pollfd pfd = {.fd = sockFds[0], .events = POLLIN, .revents = 0};
+        //RASSERT(poll(&pfd, 1, 1000) > 0 && (pfd.revents & POLLIN), "Failed to wait for client hello");
         RASSERT(m_wire.sock->addClient(sockFds[0]) != nullptr, "Failed to add client fd");
+
+        m_wire.sock->dispatchEvents(true);
 
         g_auth->log(LOG_TRACE, "(PAM S) Init done!");
     }

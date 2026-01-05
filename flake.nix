@@ -13,7 +13,7 @@
 
     hyprwire = {
       #url = "git+file:///home/max/desk/hyprwire";
-      url = "github:hyprwm/hyprwire";
+      url = "github:hyprwm/hyprwire?ref=fix-object-race";
       inputs = {
         nixpkgs.follows = "nixpkgs";
         systems.follows = "systems";
