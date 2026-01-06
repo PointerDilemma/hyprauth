@@ -31,6 +31,8 @@ namespace Hyprauth {
         SPamCreationData m_data;
 
       private:
+        void setBusy(bool busy);
+
         struct {
             Hyprutils::Memory::CSharedPointer<CHyprauthPamV1Impl>              spec;
             Hyprutils::Memory::CSharedPointer<Hyprwire::IServerSocket>         sock;
@@ -42,6 +44,7 @@ namespace Hyprauth {
         Hyprutils::OS::CFileDescriptor m_inputPipe;
         std::string                    m_failTextOverride = "";
 
+        bool                           m_busy = false;
         pid_t                          m_chldPid = -1;
     };
 }

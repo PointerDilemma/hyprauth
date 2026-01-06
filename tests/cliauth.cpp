@@ -47,12 +47,16 @@ int main(int argc, char** argv, char** envp) {
     uint32_t fails   = 0;
     bool     success = false;
 
-    authenticator->m_events.prompt.listenStatic([&logger, &authenticator](IAuthenticator::SAuthPromptData data) { //
+    authenticator->m_events.prompt.listenStatic([&logger](IAuthenticator::SAuthPromptData data) { //
         logger.log(LOG_DEBUG, "Prompt text: {}", data.promptText);
     });
 
-    authenticator->m_events.fail.listenStatic([&fails, &logger, &authenticator](IAuthenticator::SAuthFailData data) { //
+    authenticator->m_events.fail.listenStatic([&fails, &logger](IAuthenticator::SAuthFailData data) { //
         logger.log(LOG_WARN, "Fail text: {}, total fails: {}", data.failText, ++fails);
+    });
+
+    authenticator->m_events.busy.listenStatic([&logger](IAuthenticator::SBusyData data) { //
+        logger.log(LOG_DEBUG, "Busy: {}", data.busy);
     });
 
     authenticator->m_events.success.listenStatic([&logger, &authenticator, &success](eAuthProvider tok) {
@@ -79,7 +83,7 @@ int main(int argc, char** argv, char** envp) {
                 break;
             }
             if (line == "crash")
-                *((int*)0) = 0;
+                *((int*)0) = 0x1337;
 
             authenticator->submitInput(line);
         }

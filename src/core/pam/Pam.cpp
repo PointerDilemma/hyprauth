@@ -40,6 +40,7 @@ CPam::CPam(SPamCreationData data) : IAuthProvider(HYPRAUTH_PROVIDER_PAM, true), 
 
             m_wire.conversation->setPamPrompt([this](const char* msg) {
                 g_auth->log(LOG_TRACE, "(PAM S) prompt: {}", msg);
+                setBusy(false);
                 g_auth->providerPrompt(m_tok, msg);
             });
             m_wire.conversation->setPamTextInfo([](const char* msg) { g_auth->log(LOG_DEBUG, "(PAM S) text info: {}", msg); });
@@ -51,6 +52,7 @@ CPam::CPam(SPamCreationData data) : IAuthProvider(HYPRAUTH_PROVIDER_PAM, true), 
             });
             m_wire.conversation->setFail([this](const char* token_bytes, const char* msg) {
                 g_auth->log(LOG_TRACE, "(PAM S) Recieved failure");
+                setBusy(false);
                 AuthProviderToken tok = *rc<const AuthProviderToken*>(token_bytes);
                 if (!m_failTextOverride.empty()) {
                     g_auth->providerFail(tok, m_failTextOverride);
@@ -62,6 +64,7 @@ CPam::CPam(SPamCreationData data) : IAuthProvider(HYPRAUTH_PROVIDER_PAM, true), 
             });
             m_wire.conversation->setSuccess([this](const char* token_bytes) {
                 g_auth->log(LOG_TRACE, "(PAM S) Recieved success");
+                setBusy(false);
                 AuthProviderToken tok = *rc<const AuthProviderToken*>(token_bytes);
                 g_auth->providerSuccess(tok);
 
@@ -139,6 +142,8 @@ void CPam::handleInput(const std::string_view input) {
 
     if (!sendView(m_inputPipe.get(), input))
         g_auth->log(LOG_ERR, "(PAM S) Failed to send input to the pam client!");
+
+    setBusy(true);
 }
 
 int CPam::getLoopFd() {
@@ -174,4 +179,12 @@ void CPam::terminate() {
     }
 
     m_wire.sock.reset();
+}
+
+void CPam::setBusy(bool busy) {
+  if (m_busy == busy)
+      return;
+
+  m_busy = busy;
+  g_auth->providerBusy(m_tok, busy);
 }

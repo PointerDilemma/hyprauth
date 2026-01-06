@@ -37,6 +37,7 @@ void                hyprauth_submit_input(hyprauth_authenticator_t auth, const c
 typedef struct {
     void (*hyprauth_cb_prompt)(hyprauth_provider_enum_t provider, const char* promptText, void* data);
     void (*hyprauth_cb_fail)(hyprauth_provider_enum_t provider, const char* failText, void* data);
+    void (*hyprauth_cb_busy)(hyprauth_provider_enum_t provider, bool busy, void* data);
     void (*hyprauth_cb_success)(hyprauth_provider_enum_t provider, void* data);
 } hyprauth_callbacks;
 

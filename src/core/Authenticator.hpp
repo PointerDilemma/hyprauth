@@ -21,6 +21,7 @@ namespace Hyprauth {
         // Provider events
         void               providerPrompt(AuthProviderToken tok, const std::string& promptText);
         void               providerFail(AuthProviderToken tok, const std::string& failText);
+        void               providerBusy(AuthProviderToken tok, bool busy);
         void               providerSuccess(AuthProviderToken tok);
 
         const std::string& getUserName();

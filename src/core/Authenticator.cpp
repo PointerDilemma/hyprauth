@@ -127,6 +127,18 @@ void CAuthenticator::providerFail(AuthProviderToken tok, const std::string& fail
     m_events.fail.emit(SAuthFailData{.from = provider->m_kind, .failText = failText});
 }
 
+void CAuthenticator::providerBusy(AuthProviderToken tok, bool busy) {
+    std::lock_guard<std::mutex> lg(m_implEventMutex);
+
+    auto provider = getProvider(tok);
+    if (!provider)
+        return;
+
+    log(LOG_TRACE, "Authentication busy: {}", busy);
+
+    m_events.busy.emit(SBusyData{.from = provider->m_kind, .busy = busy});
+}
+
 void CAuthenticator::providerSuccess(AuthProviderToken tok) {
     std::lock_guard<std::mutex> lg(m_implEventMutex);
 

@@ -104,5 +104,6 @@ void hyprauth_set_callbacks(hyprauth_authenticator_t auth, hyprauth_callbacks cb
 
     g_auth->m_events.prompt.listenStatic([userData, fun = cbs.hyprauth_cb_prompt](IAuthenticator::SAuthPromptData data) { fun(data.from, data.promptText.c_str(), userData); });
     g_auth->m_events.fail.listenStatic([userData, fun = cbs.hyprauth_cb_fail](IAuthenticator::SAuthFailData data) { fun(data.from, data.failText.c_str(), userData); });
+    g_auth->m_events.busy.listenStatic([userData, fun = cbs.hyprauth_cb_busy](IAuthenticator::SBusyData data) { fun(data.from, data.busy, userData); });
     g_auth->m_events.success.listenStatic([userData, fun = cbs.hyprauth_cb_success](eAuthProvider from) { fun(from, userData); });
 }

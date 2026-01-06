@@ -63,23 +63,32 @@ namespace Hyprauth {
             std::string       failText;
         };
 
+        struct SBusyData {
+            eAuthProvider     from;
+            bool              busy = false;
+        };
+
         struct {
             /*
-                One of the authentication providers sends a prompt text.
-                The token identifies which one.
+                Informs the library user about provider prompt texts.
             */
             Hyprutils::Signal::CSignalT<SAuthPromptData> prompt;
 
             /*
-                One of the authentication providers had an authentication failure.
+                Notification for a failed authentication attempt.
             */
             Hyprutils::Signal::CSignalT<SAuthFailData> fail;
 
             /*
-                One of the authentication providers authenticated successfully.
+                Indicates whether an authentication provider is busy.
+                TODO: Add fprint busy events
+            */
+            Hyprutils::Signal::CSignalT<SBusyData> busy;
+
+            /*
+                The provided authentication provider authenticated successfully.
             */
             Hyprutils::Signal::CSignalT<eAuthProvider> success;
-
         } m_events;
     };
 }
