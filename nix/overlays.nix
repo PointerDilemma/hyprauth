@@ -30,9 +30,7 @@ in {
     })
   ];
 
-  # Debug
   hyprauth-debug = lib.composeManyExtensions [
-    # Dependencies
     self.overlays.hyprauth
 
     (final: prev: {

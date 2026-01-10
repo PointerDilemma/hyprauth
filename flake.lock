@@ -36,16 +36,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1767633561,
-        "narHash": "sha256-nCf0iTu9O+dihZ8Qdm1Vwn5+vfYG9KDAcajrAPX40QI=",
+        "lastModified": 1769109506,
+        "narHash": "sha256-LkQIKoyabNz8EqqAlTTTAcszPl3Dk7df8ctJj7Ah7kc=",
         "owner": "hyprwm",
         "repo": "hyprwire",
-        "rev": "f3b4266618ef862684ca6b090b592df37e2d7588",
+        "rev": "ee9c7e8dc2e1552d1028d18d20ea410f75512f74",
         "type": "github"
       },
       "original": {
         "owner": "hyprwm",
-        "ref": "fix-object-race",
         "repo": "hyprwire",
         "type": "github"
       }
