@@ -21,8 +21,7 @@ CMakeUserPresets.json
 build/
 .vscode/
 .cache/
-tests/generated/
+src/core/pam/generated/
 
 *.inc
-src/core/pam/generated/*.{cpp, hpp}
 .gdb_history

@@ -28,11 +28,11 @@ void terminalEcho(bool enable = false) {
 int main(int argc, char** argv, char** envp) {
     terminalEcho(false);
 
-    Hyprutils::CLI::CLogger                    logger;
+    Hyprutils::CLI::CLogger    logger;
 
     SAuthenticatorCreationData data;
-    data.pLogConnection                           = makeShared<CLoggerConnection>(logger);
-    auto                            authenticator = IAuthenticator::create(data);
+    data.pLogConnection            = makeShared<CLoggerConnection>(logger);
+    auto             authenticator = IAuthenticator::create(data);
 
     SPamCreationData pamData;
     pamData.module          = "su";

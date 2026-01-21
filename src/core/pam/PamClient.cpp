@@ -11,18 +11,18 @@ using namespace Hyprauth;
 using namespace Hyprutils::CLI;
 using namespace Hyprutils::OS;
 
-CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const SPamCreationData& data) : m_tok(tok), m_data(data) {
+CPamClient::CPamClient(int sockFd, uint64_t id, const SPamCreationData& data) : m_providerId(id), m_data(data) {
     m_wire.spec = makeShared<CCHyprauthPamV1Impl>(HYPRAUTH_PAM_PROTOCOL_VERSION);
     m_wire.sock = Hyprwire::IClientSocket::open(sockFd);
     if (!m_wire.sock) {
         g_auth->log(LOG_ERR, "(PAM C) Error attempting to open the pam client socket!");
-        exit(1);
+        _exit(1);
     }
 
     m_wire.sock->addImplementation(m_wire.spec);
     if (!m_wire.sock->waitForHandshake()) {
         g_auth->log(LOG_ERR, "(PAM C) Error waiting for conversation handshake!");
-        exit(1);
+        _exit(1);
     }
 
     const auto SPEC = m_wire.sock->getSpec(m_wire.spec->protocol()->specName());
@@ -31,7 +31,7 @@ CPamClient::CPamClient(int sockFd, AuthProviderToken tok, const SPamCreationData
     m_wire.manager = makeUnique<CCPamConversationManagerV1Object>(m_wire.sock->bindProtocol(m_wire.spec->protocol(), HYPRAUTH_PAM_PROTOCOL_VERSION));
     m_wire.manager->setDestroy([this]() {
         g_auth->log(LOG_TRACE, "(PAM C) Server send destroy! Will exit.");
-        exit(0);
+        _exit(0);
     });
 
     m_wire.manager->setResponseChannel([this](int fd) {
@@ -85,16 +85,14 @@ int conv(int num_msg, const struct pam_message** msg, struct pam_response** resp
 void CPamClient::auth() {
     const auto     USERNAME = g_auth->getUserName();
 
-    const pam_conv localConv            = {.conv = conv, .appdata_ptr = this};
-    pam_handle_t*  handle               = nullptr;
-    char           tokenBytes[9]        = {0};
-    *rc<AuthProviderToken*>(tokenBytes) = m_tok;
+    const pam_conv localConv = {.conv = conv, .appdata_ptr = this};
+    pam_handle_t*  handle    = nullptr;
 
-    int ret = PAM_SUCCESS;
-    ret     = pam_start(m_data.module.c_str(), USERNAME.c_str(), &localConv, &handle);
+    int            ret = PAM_SUCCESS;
+    ret                = pam_start(m_data.module.c_str(), USERNAME.c_str(), &localConv, &handle);
 
     if (ret != PAM_SUCCESS) {
-        m_wire.conversation->sendFail(tokenBytes, std::format("pam_start failed for module {}", m_data.module).c_str());
+        m_wire.conversation->sendFail(PROVIDER_ID_LOWER(m_providerId), PROVIDER_ID_UPPER(m_providerId), std::format("pam_start failed for module {}", m_data.module).c_str());
         return;
     }
 
@@ -111,7 +109,7 @@ void CPamClient::auth() {
     handle = nullptr;
 
     if (ret != PAM_SUCCESS)
-        m_wire.conversation->sendFail(tokenBytes, (ret != PAM_AUTH_ERR && PAMERR) ? PAMERR : "Authentication failed");
+        m_wire.conversation->sendFail(PROVIDER_ID_LOWER(m_providerId), PROVIDER_ID_UPPER(m_providerId), (ret != PAM_AUTH_ERR && PAMERR) ? PAMERR : "Authentication failed");
     else
-        m_wire.conversation->sendSuccess(tokenBytes);
+        m_wire.conversation->sendSuccess(PROVIDER_ID_LOWER(m_providerId), PROVIDER_ID_UPPER(m_providerId));
 }

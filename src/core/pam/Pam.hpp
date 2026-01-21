@@ -22,11 +22,11 @@ namespace Hyprauth {
         CPam(SPamCreationData data);
 
         virtual ~CPam();
-        virtual void                    start();
-        virtual void                    handleInput(const std::string_view input);
-        virtual bool                    dispatchEvents();
-        virtual int                     getLoopFd();
-        virtual void                    terminate();
+        virtual void     start();
+        virtual void     handleInput(const std::string_view input);
+        virtual bool     dispatchEvents();
+        virtual int      getLoopFd();
+        virtual void     terminate();
 
         SPamCreationData m_data;
 
@@ -44,7 +44,7 @@ namespace Hyprauth {
         Hyprutils::OS::CFileDescriptor m_inputPipe;
         std::string                    m_failTextOverride = "";
 
-        bool                           m_busy = false;
+        bool                           m_busy    = false;
         pid_t                          m_chldPid = -1;
     };
 }

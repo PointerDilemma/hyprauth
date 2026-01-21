@@ -41,7 +41,7 @@ CPam::CPam(SPamCreationData data) : IAuthProvider(HYPRAUTH_PROVIDER_PAM, true), 
             m_wire.conversation->setPamPrompt([this](const char* msg) {
                 g_auth->log(LOG_TRACE, "(PAM S) prompt: {}", msg);
                 setBusy(false);
-                g_auth->providerPrompt(m_tok, msg);
+                g_auth->providerPrompt(m_id, msg);
             });
             m_wire.conversation->setPamTextInfo([](const char* msg) { g_auth->log(LOG_DEBUG, "(PAM S) text info: {}", msg); });
             m_wire.conversation->setPamErrorMsg([this](const char* msg) {
@@ -50,23 +50,22 @@ CPam::CPam(SPamCreationData data) : IAuthProvider(HYPRAUTH_PROVIDER_PAM, true), 
                 if (const auto MSG = std::string_view(msg); MSG.contains("left to unlock"))
                     m_failTextOverride = MSG;
             });
-            m_wire.conversation->setFail([this](const char* token_bytes, const char* msg) {
+            m_wire.conversation->setFail([this](uint32_t id_lower, uint32_t id_upper, const char* msg) {
                 g_auth->log(LOG_TRACE, "(PAM S) Recieved failure");
                 setBusy(false);
-                AuthProviderToken tok = *rc<const AuthProviderToken*>(token_bytes);
+                const auto ID = PROVIDER_ID(id_lower, id_upper);
                 if (!m_failTextOverride.empty()) {
-                    g_auth->providerFail(tok, m_failTextOverride);
+                    g_auth->providerFail(ID, m_failTextOverride);
                     m_failTextOverride.clear();
                 } else
-                    g_auth->providerFail(tok, msg);
+                    g_auth->providerFail(ID, msg);
 
                 m_wire.conversation->sendStart();
             });
-            m_wire.conversation->setSuccess([this](const char* token_bytes) {
+            m_wire.conversation->setSuccess([this](uint32_t id_lower, uint32_t id_upper) {
                 g_auth->log(LOG_TRACE, "(PAM S) Recieved success");
                 setBusy(false);
-                AuthProviderToken tok = *rc<const AuthProviderToken*>(token_bytes);
-                g_auth->providerSuccess(tok);
+                g_auth->providerSuccess(PROVIDER_ID(id_lower, id_upper));
 
                 m_wire.manager->sendDestroy();
             });
@@ -101,8 +100,10 @@ CPam::~CPam() {
 
 void CPam::start() {
     int sockFds[2];
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockFds))
+    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockFds)) {
+        g_auth->log(LOG_ERR, "(PAM S) Error calling socketpair: {}", strerror(errno));
         return;
+    }
 
     m_chldPid = fork();
     if (m_chldPid < 0) {
@@ -112,13 +113,19 @@ void CPam::start() {
     } else if (m_chldPid == 0) {
         // CHILD (Pam client)
         close(sockFds[0]);
-        auto client = makeUnique<CPamClient>(sockFds[1], m_tok, m_data);
+
+        // Block all blockable signals
+        sigset_t set;
+        sigfillset(&set);
+        sigprocmask(SIG_BLOCK, &set, NULL);
+
+        auto client = makeUnique<CPamClient>(sockFds[1], m_id, m_data);
 
         g_auth->log(LOG_TRACE, "(PAM C) Client entering eventloop!");
         while (client->m_wire.sock->dispatchEvents(true))
             ;
 
-        exit(1); // This is an error. We exit directly within the destroy event.
+        _exit(1);
     } else {
         // PARENT (Authenticator)
         close(sockFds[1]);
@@ -126,11 +133,10 @@ void CPam::start() {
         m_wire.sock   = Hyprwire::IServerSocket::open();
         m_wire.sock->addImplementation(m_wire.spec);
 
-        //pollfd pfd = {.fd = sockFds[0], .events = POLLIN, .revents = 0};
-        //RASSERT(poll(&pfd, 1, 1000) > 0 && (pfd.revents & POLLIN), "Failed to wait for client hello");
         RASSERT(m_wire.sock->addClient(sockFds[0]) != nullptr, "Failed to add client fd");
 
-        m_wire.sock->dispatchEvents(true);
+        while (!m_inputPipe.isValid())
+            m_wire.sock->dispatchEvents(true);
 
         g_auth->log(LOG_TRACE, "(PAM S) Init done!");
     }
@@ -167,7 +173,10 @@ void CPam::terminate() {
     if (m_inputPipe.isValid())
         sendView(m_inputPipe.get(), std::string_view{"", 0});
 
-    dispatchEvents();
+    if (m_wire.sock) {
+        m_wire.sock->removeClient(m_wire.sockFd);
+        m_wire.sock.reset();
+    }
 
     if (m_chldPid > 0) {
         int status = 0;
@@ -177,14 +186,12 @@ void CPam::terminate() {
 
         m_chldPid = 0;
     }
-
-    m_wire.sock.reset();
 }
 
 void CPam::setBusy(bool busy) {
-  if (m_busy == busy)
-      return;
+    if (m_busy == busy)
+        return;
 
-  m_busy = busy;
-  g_auth->providerBusy(m_tok, busy);
+    m_busy = busy;
+    g_auth->providerBusy(m_id, busy);
 }

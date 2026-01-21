@@ -158,17 +158,17 @@ void CFprintDbus::handleVerifyStatus(const std::string& result, bool done) {
     const auto RESULT = s_mapStringToTestType[result];
     switch (RESULT) {
         case MATCH_INVALID: g_auth->log(LOG_WARN, "(FP) unknown status: {}", result); break;
-        case MATCH_NO_MATCH: g_auth->providerFail(m_tok, "Fingerprint did not match"); break;
-        case MATCH_UNKNOWN_ERROR: g_auth->providerFail(m_tok, "Fingerprint auth disabled (unknown error)"); break;
+        case MATCH_NO_MATCH: g_auth->providerFail(m_id, "Fingerprint did not match"); break;
+        case MATCH_UNKNOWN_ERROR: g_auth->providerFail(m_id, "Fingerprint auth disabled (unknown error)"); break;
         case MATCH_MATCHED:
             if (m_numTry <= m_data.numTries)
-                g_auth->providerSuccess(m_tok);
+                g_auth->providerSuccess(m_id);
             break;
-        case MATCH_RETRY: g_auth->providerPrompt(m_tok, "Please retry fingerprint scan"); break;
-        case MATCH_SWIPE_TOO_SHORT: g_auth->providerPrompt(m_tok, "Swipe too short - try again"); break;
-        case MATCH_FINGER_NOT_CENTERED: g_auth->providerPrompt(m_tok, "Finger not centered - try again"); break;
-        case MATCH_REMOVE_AND_RETRY: g_auth->providerPrompt(m_tok, "Remove your finger and try again"); break;
-        case MATCH_DISCONNECTED: g_auth->providerPrompt(m_tok, "Fingerprint device disconnected"); break;
+        case MATCH_RETRY: g_auth->providerPrompt(m_id, "Please retry fingerprint scan"); break;
+        case MATCH_SWIPE_TOO_SHORT: g_auth->providerPrompt(m_id, "Swipe too short - try again"); break;
+        case MATCH_FINGER_NOT_CENTERED: g_auth->providerPrompt(m_id, "Finger not centered - try again"); break;
+        case MATCH_REMOVE_AND_RETRY: g_auth->providerPrompt(m_id, "Remove your finger and try again"); break;
+        case MATCH_DISCONNECTED: g_auth->providerPrompt(m_id, "Fingerprint device disconnected"); break;
     }
 
     if (done && RESULT != MATCH_MATCHED)
@@ -206,13 +206,13 @@ void CFprintDbus::startVerify() {
     m_dbusState.device->callMethodAsync("VerifyStart").onInterface(DEVICE).withArguments(FINGER).uponReplyInvoke([this](std::optional<sdbus::Error> e) {
         if (e) {
             g_auth->log(LOG_WARN, "(FP) could not start verifying, {}", e->what());
-            g_auth->providerFail(m_tok, "Fingerprint auth disabled (failed to restart)");
+            g_auth->providerFail(m_id, "Fingerprint auth disabled (failed to restart)");
             return;
         }
 
         m_numTry++;
         m_dbusState.verifying = true;
-        g_auth->providerPrompt(m_tok, m_data.readyPrompt);
+        g_auth->providerPrompt(m_id, m_data.readyPrompt);
     });
 }
 

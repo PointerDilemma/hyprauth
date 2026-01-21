@@ -6,13 +6,11 @@
 #include <hyprutils/memory/SharedPtr.hpp>
 
 namespace Hyprauth {
-    enum eAuthProvider: int8_t {
+    enum eAuthProvider : int8_t {
         HYPRAUTH_PROVIDER_INVALID = -1,
         HYPRAUTH_PROVIDER_PAM,
         HYPRAUTH_PROVIDER_FPRINT,
     };
-
-    using AuthProviderToken = uint64_t;
 
     class IAuthProvider {
       public:
@@ -28,7 +26,7 @@ namespace Hyprauth {
 
         /*
             Submit input to the implementation.
-            An implementation must not block the current thread with this call.
+            An implementation must not block the current thread to wait on the result with this call.
         */
         virtual void handleInput(const std::string_view input) = 0;
 
@@ -44,11 +42,12 @@ namespace Hyprauth {
            In case something failed or this function is called before init (called via IAuthenticator::start),
            it may return -1;
         */
-        virtual int       getLoopFd() = 0;
+        virtual int   getLoopFd() = 0;
 
-        eAuthProvider     m_kind = HYPRAUTH_PROVIDER_INVALID;
-        AuthProviderToken m_tok       = 0; // set by CAuthenticator::addProvider
-        bool              m_sendInput = false;
+        eAuthProvider m_kind = HYPRAUTH_PROVIDER_INVALID;
+        uint64_t      m_id   = 0; // set by CAuthenticator::addProvider
+
+        bool          m_sendInput = false;
     };
 
     /*

@@ -54,18 +54,18 @@ namespace Hyprauth {
         virtual void submitInput(const std::string_view input) = 0;
 
         struct SAuthPromptData {
-            eAuthProvider     from;
-            std::string       promptText;
+            eAuthProvider from;
+            std::string   promptText;
         };
 
         struct SAuthFailData {
-            eAuthProvider     from;
-            std::string       failText;
+            eAuthProvider from;
+            std::string   failText;
         };
 
         struct SBusyData {
-            eAuthProvider     from;
-            bool              busy = false;
+            eAuthProvider from;
+            bool          busy = false;
         };
 
         struct {

@@ -41,3 +41,9 @@ inline float steadyMillis() {
 #define UNREACHABLE() RASSERT(false, "Reached an unreachable block");
 
 #endif
+
+#define PROVIDER_ID_LOWER(id) sc<uint32_t>(id & ((1llu << 32) - 1))
+
+#define PROVIDER_ID_UPPER(id) sc<uint32_t>((id >> 32) & ((1llu << 32) - 1))
+
+#define PROVIDER_ID(id_lower, id_upper) sc<uint64_t>((0llu + id_lower) | ((0llu + id_upper) << 32))

@@ -77,17 +77,19 @@
     <c2s name="success">
       <description summary="Submit authentication success">
         Success event from the pam client.
-        The server must ignore this in case token_bytes does not match the corresponding provider token on the server side.
+        The server must ignore this in case id_lower AND (id_upper LSHIFT 32) does not match the corresponding provider id on the server side.
       </description>
-      <arg name="token_bytes" type="varchar" summary="token bytes"/>
+      <arg name="id_lower" type="uint" summary="lower 32 bits of the provider id"/>
+      <arg name="id_upper" type="uint" summary="upper 32 bits of the provider id"/>
     </c2s>
 
     <c2s name="fail">
       <description summary="Sumbit authentication failure">
         Failure event from the pam client.
-        The server must ignore this in case token_bytes does not match the corresponding provider token on the server side.
+        The server must ignore this in case id_lower AND (id_upper LSHIFT 32) does not match the corresponding provider id on the server side.
       </description>
-      <arg name="token_bytes" type="varchar" summary="token bytes"/>
+      <arg name="id_lower" type="uint" summary="lower 32 bits of the provider id"/>
+      <arg name="id_upper" type="uint" summary="upper 32 bits of the provider id"/>
       <arg name="message" type="varchar" summary="token bytes"/>
     </c2s>
 

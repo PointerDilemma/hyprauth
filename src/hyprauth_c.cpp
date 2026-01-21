@@ -11,7 +11,7 @@ using namespace Hyprutils::Memory;
 
 hyprauth_authenticator_t hyprauth_create(const char* user_name, bool allow_coredump) {
     SAuthenticatorCreationData data;
-    data.userName = user_name;
+    data.userName      = user_name;
     data.allowCoredump = allow_coredump;
 
     auto authenticator = IAuthenticator::create(data);
@@ -41,7 +41,7 @@ hyprauth_provider_t hyprauth_add_pam_provider(hyprauth_authenticator_t auth, hyp
         return 0;
 
     g_auth->addProvider(pam);
-    return pam->m_tok;
+    return pam->m_id;
 };
 
 hyprauth_provider_t hyprauth_add_fprint_provider(hyprauth_authenticator_t auth, hyprauth_fprint_options opts) {
@@ -57,7 +57,7 @@ hyprauth_provider_t hyprauth_add_fprint_provider(hyprauth_authenticator_t auth, 
         return 0;
 
     g_auth->addProvider(fprint);
-    return fprint->m_tok;
+    return fprint->m_id;
 };
 
 int hyprauth_provider_loop_fd(hyprauth_authenticator_t auth, hyprauth_provider_t provider) {
@@ -102,8 +102,20 @@ void hyprauth_set_callbacks(hyprauth_authenticator_t auth, hyprauth_callbacks cb
     if (g_auth.get() != auth)
         return;
 
-    g_auth->m_events.prompt.listenStatic([userData, fun = cbs.hyprauth_cb_prompt](IAuthenticator::SAuthPromptData data) { fun(data.from, data.promptText.c_str(), userData); });
-    g_auth->m_events.fail.listenStatic([userData, fun = cbs.hyprauth_cb_fail](IAuthenticator::SAuthFailData data) { fun(data.from, data.failText.c_str(), userData); });
-    g_auth->m_events.busy.listenStatic([userData, fun = cbs.hyprauth_cb_busy](IAuthenticator::SBusyData data) { fun(data.from, data.busy, userData); });
-    g_auth->m_events.success.listenStatic([userData, fun = cbs.hyprauth_cb_success](eAuthProvider from) { fun(from, userData); });
+    g_auth->m_events.prompt.listenStatic([userData, fun = cbs.hyprauth_cb_prompt](IAuthenticator::SAuthPromptData data) {
+        if (fun)
+            fun(data.from, data.promptText.c_str(), userData);
+    });
+    g_auth->m_events.fail.listenStatic([userData, fun = cbs.hyprauth_cb_fail](IAuthenticator::SAuthFailData data) {
+        if (fun)
+            fun(data.from, data.failText.c_str(), userData);
+    });
+    g_auth->m_events.busy.listenStatic([userData, fun = cbs.hyprauth_cb_busy](IAuthenticator::SBusyData data) {
+        if (fun)
+            fun(data.from, data.busy, userData);
+    });
+    g_auth->m_events.success.listenStatic([userData, fun = cbs.hyprauth_cb_success](eAuthProvider from) {
+        if (fun)
+            fun(from, userData);
+    });
 }
